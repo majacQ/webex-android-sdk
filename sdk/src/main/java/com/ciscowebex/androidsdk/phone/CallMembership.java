@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -100,10 +100,12 @@ public interface CallMembership {
     State getState();
 
     /**
-     * @return The email address of the person in this CallMembership.
-     * @since 0.1
+     * Notice, removed the getEmail() function, due to the email address can no longer get, since privacy protection reason.
+     * Please use this function to show a display name instead.
+     * @return The display name of the person in this CallMembership.
+     * @since 2.8.0
      */
-    String getEmail();
+    String getDisplayName();
 
     /**
      * @return The SIP address of the person in this CallMembership.
