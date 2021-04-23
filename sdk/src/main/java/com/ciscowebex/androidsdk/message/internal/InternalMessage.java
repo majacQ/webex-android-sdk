@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,6 +56,13 @@ public class InternalMessage extends Message {
     public static class InternalMessageFileThumbnailsUpdated extends MessageObserver.MessageFileThumbnailsUpdated{
         public InternalMessageFileThumbnailsUpdated(String message, ActivityModel activity, List<RemoteFile> files){
             super(message, activity, files);
+        }
+    }
+
+    public static class InternalMessageEdited extends MessageObserver.MessageEdited{
+
+        protected InternalMessageEdited(String messageId, Credentials user, ActivityModel activity) {
+            super(messageId, user, activity);
         }
     }
 
