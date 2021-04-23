@@ -22,6 +22,8 @@
 
 package com.ciscowebex.androidsdk.phone;
 
+import android.support.annotation.Nullable;
+
 /**
  * A data type represents a relationship between *Call* and *Person* at Cisco Webex cloud.
  *
@@ -138,4 +140,17 @@ public interface CallMembership {
      * @since 2.5.0
      */
     boolean isActiveSpeaker();
+
+    /**
+     * @return True is the `CallMembership` is muted by other. Otherwise, false.
+     * @since 2.7.0
+     */
+    boolean isAudioMutedControlled();
+
+    /**
+     * @return The ID of the person who muted/unmuted this `CallMembership`
+     * @since 2.7.0
+     */
+    @Nullable
+    String audioModifiedBy();
 }

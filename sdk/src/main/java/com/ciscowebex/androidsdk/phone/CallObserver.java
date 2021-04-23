@@ -36,11 +36,14 @@ public interface CallObserver {
 
     /**
      * Callback when the call is waiting.
-     * @param call Call.
+     *
+     * @param call   Call.
      * @param reason The reason why the call is waiting.
      * @since 2.4.0
      */
-    void onWaiting(Call call, Call.WaitReason reason);
+    default void onWaiting(Call call, Call.WaitReason reason) {
+
+    }
 
     /**
      * Callback when remote participant(s) is ringing.
@@ -48,7 +51,9 @@ public interface CallObserver {
      * @param call Call
      * @since 0.1
      */
-    void onRinging(Call call);
+    default void onRinging(Call call) {
+
+    }
 
     /**
      * Callback when remote participant(s) answered and the call is connected.
@@ -56,7 +61,9 @@ public interface CallObserver {
      * @param call Call
      * @since 0.1
      */
-    void onConnected(Call call);
+    default void onConnected(Call call) {
+
+    }
 
     /**
      * Callback when the call is disconnected (hangup, cancelled, get declined or other self device pickup the call).
@@ -64,7 +71,9 @@ public interface CallObserver {
      * @param event event
      * @since 0.1
      */
-    void onDisconnected(CallDisconnectedEvent event);
+    default void onDisconnected(CallDisconnectedEvent event) {
+
+    }
 
     /**
      * Callback when the media types of the call have changed.
@@ -72,7 +81,9 @@ public interface CallObserver {
      * @param event event
      * @since 0.1
      */
-    void onMediaChanged(MediaChangedEvent event);
+    default void onMediaChanged(MediaChangedEvent event) {
+
+    }
 
     /**
      * Callback when the memberships of this call have changed.
@@ -80,7 +91,19 @@ public interface CallObserver {
      * @param event event
      * @since 1.3.0
      */
-    void onCallMembershipChanged(CallMembershipChangedEvent event);
+    default void onCallMembershipChanged(CallMembershipChangedEvent event) {
+
+    }
+
+    /**
+     * Callback when the `Call` is scheduled call and the schedules of the call has been changed.
+     *
+     * @param call Call
+     * @since 2.6.0
+     */
+    default void onScheduleChanged(Call call) {
+
+    }
 
     /**
      * Base class for the event of a call
@@ -606,11 +629,11 @@ public interface CallObserver {
             _to = to;
         }
 
-        public CallMembership from(){
+        public CallMembership from() {
             return _from;
         }
 
-        public CallMembership to(){
+        public CallMembership to() {
             return _to;
         }
 
@@ -740,17 +763,29 @@ public interface CallObserver {
      *
      * @since 2.4.0
      */
-    class MembershipWaitingEvent extends AbstractCallMembershipChangedEvent{
+    class MembershipWaitingEvent extends AbstractCallMembershipChangedEvent {
 
         private Call.WaitReason waitReason;
 
-        public MembershipWaitingEvent(Call call, CallMembership membership, Call.WaitReason waitReason){
+        public MembershipWaitingEvent(Call call, CallMembership membership, Call.WaitReason waitReason) {
             super(call, membership);
             this.waitReason = waitReason;
         }
 
         public Call.WaitReason getWaitReason() {
             return waitReason;
+        }
+    }
+
+    /**
+     * This might be triggered when the person in the membership is muted by others in the meeting.
+     *
+     * @since 2.7.0
+     */
+    class MembershipAudioMutedControlledEvent extends AbstractCallMembershipChangedEvent {
+
+        public MembershipAudioMutedControlledEvent(Call call, CallMembership membership) {
+            super(call, membership);
         }
     }
 }

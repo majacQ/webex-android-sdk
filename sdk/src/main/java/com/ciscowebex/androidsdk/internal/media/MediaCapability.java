@@ -24,17 +24,23 @@ package com.ciscowebex.androidsdk.internal.media;
 
 import android.os.Build;
 import android.os.Environment;
+
+import com.ciscowebex.androidsdk.phone.AdvancedSetting;
 import com.ciscowebex.androidsdk.phone.Phone;
 import com.ciscowebex.androidsdk.utils.Lists;
 import com.github.benoitdion.ln.Ln;
 import com.webex.wme.MediaConfig;
 import com.webex.wme.MediaConnection;
-import me.helloworld.utils.Checker;
+
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+
+import me.helloworld.utils.Checker;
 
 public class MediaCapability {
 
@@ -45,7 +51,7 @@ public class MediaCapability {
             + "\"yv12Capture\":false"
             + "}}}}";
 
-    private static final List<String> DEFAULT_AE_MODLES =  Lists.asList("SM-G93", "SM-G95", "SM-G96", "SM-G97", "SM-N95", "SM-N96", "GM19");
+    private static final List<String> DEFAULT_AE_MODLES = Lists.asList("SM-G93", "SM-G95", "SM-G96", "SM-G97", "SM-N95", "SM-N96", "GM19");
 
     private static final int DEFAULT_MAX_STREAMS = 4;
 
@@ -77,7 +83,13 @@ public class MediaCapability {
 
     private WMEngine.Camera camera = WMEngine.Camera.FRONT;
 
+    private Map<Class<? extends AdvancedSetting>, AdvancedSetting> settings = null;
+
     private EnumSet<MediaConstraint> constraints = EnumSet.noneOf(MediaConstraint.class);
+
+    private boolean enableAudioBNR = false;
+
+    private Phone.AudioBRNMode audioBRNMode = Phone.AudioBRNMode.HP;
 
     public MediaCapability() {
         setAudioEnhancementModels(null);
@@ -125,10 +137,6 @@ public class MediaCapability {
         return enableCamera2;
     }
 
-    public void enableCamera2(boolean enableCamera2) {
-        this.enableCamera2 = enableCamera2;
-    }
-
     public boolean isAudioEnhancement() {
         return isAudioEnhancement;
     }
@@ -160,6 +168,14 @@ public class MediaCapability {
         this.camera = camera;
     }
 
+    public void setEnableAudioBNR(boolean enableAudioBNR) {
+        this.enableAudioBNR = enableAudioBNR;
+    }
+
+    public void setAudioBRNMode(Phone.AudioBRNMode audioBRNMode) {
+        this.audioBRNMode = audioBRNMode;
+    }
+
     public void setAudioPlaybackFile(String audioPlaybackFile) {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
@@ -188,6 +204,10 @@ public class MediaCapability {
 
     public int getMaxNumberStreams() {
         return maxNumberStreams;
+    }
+
+    public void setAdvanceSettings(Map<Class<? extends AdvancedSetting>, AdvancedSetting> settings) {
+        this.settings = settings;
     }
 
     public void addConstraints(MediaConstraint... constraints) {
@@ -221,94 +241,155 @@ public class MediaCapability {
     }
 
     public void setupConnection(MediaConnection connection) {
-        applyConfig(connection.GetGlobalConfig());
-        applyConfig(connection.GetAudioConfig(WMEngine.Media.Audio.mid()));
-        applyConfig(connection.GetVideoConfig(WMEngine.Media.Video.mid()));
-        applyConfig(connection.GetShareConfig(WMEngine.Media.Sharing.mid()));
+        applyGlobalConfig(connection);
+        applyAudioConfig(connection);
+        applyVideoConfig(connection);
+        applySharingConfig(connection);
     }
 
-    private void applyConfig(MediaConfig.GlobalConfig config) {
+    private void applyGlobalConfig(MediaConnection connection) {
+        MediaConfig.GlobalConfig config = connection.GetGlobalConfig();
+        config.EnableMQECallback(true);
         config.EnableICE(true);
         config.EnableSRTP(true);
         config.EnableQos(true);
-        config.EnableMultiStream(multistream);
+        config.EnableMultiStream(this.multistream);
         config.EnablePerformanceTraceDump(MediaConfig.WmePerformanceDumpType.WmePerformanceDumpNone);
         config.SetNetworkNotificationParam(MediaConfig.WmeNetworkStatus.WmeNetwork_bad, MediaConfig.WmeNetworkDirection.DIRECTION_BOTHLINK, 5000);
         config.SetNetworkNotificationParam(MediaConfig.WmeNetworkStatus.WmeNetwork_video_off, MediaConfig.WmeNetworkDirection.DIRECTION_BOTHLINK, 7000);
         config.SetNetworkNotificationParam(MediaConfig.WmeNetworkStatus.WmeNetwork_recovered, MediaConfig.WmeNetworkDirection.DIRECTION_BOTHLINK, 10000);
         config.SetICETimeoutParams(10 * 1000, 10 * 1000, 10 * 1000);
         config.SetQoSMaxLossRatio(0.08f);
-        if (!Checker.isEmpty(deviceSettings)) {
-            Ln.d("Default Settings: " + deviceSettings);
-            config.SetDeviceMediaSettings(deviceSettings);
-        }
+//        if (!Checker.isEmpty(deviceSettings)) {
+//            Ln.d("Default Settings: " + deviceSettings);
+//            config.SetDeviceMediaSettings(deviceSettings);
+//        }
+
+        // For SPARK-166469
+        config.SetDeviceMediaSettings("{\"audio\": {\"AECType\": 2,\"Version\": 4, \"AudioMode\": 2, \"CaptureMode\": 20, \"PlaybackMode\": 12}}");
+
         if (isHardwareCodecEnable()) {
             Ln.d("HW Settings: " + hardwareVideoSetting);
             config.SetDeviceMediaSettings(hardwareVideoSetting);
         }
-        // config.enableTCAEC(false);
-        // config.SetShowStunTraceIP(true);
+//        config.enableTCAEC(false);
+//        config.SetShowStunTraceIP(true);
         config.EnableFixAudioProcessingArch(true);
     }
 
-    private void applyConfig(MediaConfig.AudioConfig config) {
+    private void applyAudioConfig(MediaConnection connection) {
+        MediaConfig.AudioConfig config = connection.GetAudioConfig(WMEngine.Media.Audio.mid());
         config.SetSelectedCodec(MediaConfig.WmeCodecType.WmeCodecType_OPUS);
         config.SetPreferedCodec(MediaConfig.WmeCodecType.WmeCodecType_OPUS);
         config.EnableFec(true);
         config.EnableRecordLossData(false);
         config.EnableClientMix(1);
         config.SetMaxBandwidth(audioMaxRxBandwidth);
+        config.EnableBNR(enableAudioBNR);
+        if (enableAudioBNR) {
+            config.SetBNRProfileMode(audioBRNMode.getValue());
+        }
         if (!Checker.isEmpty(audioPlaybackFile)) {
             config.EnableFileCapture(audioPlaybackFile, true);
         }
     }
 
-    private void applyConfig(MediaConfig.ShareConfig config) {
+    private void applySharingConfig(MediaConnection connection) {
+        MediaConfig.ShareConfig config = connection.GetShareConfig(WMEngine.Media.Sharing.mid());
         config.SetMaxBandwidth(sharingMaxRxBandwidth);
+        if (!Checker.isEmpty(this.settings)) {
+            AdvancedSetting.ShareMaxCaptureFPS setting = (AdvancedSetting.ShareMaxCaptureFPS) this.settings.get(AdvancedSetting.ShareMaxCaptureFPS.class);
+            if (setting != null && setting.getValue() != null && setting.getValue() > 0 && !setting.getValue().equals(AdvancedSetting.ShareMaxCaptureFPS.defaultValue)) {
+                int fps = setting.getValue();
+                if (fps > 10) {
+                    fps = 10;
+                }
+                config.SetScreenMaxCaptureFps(fps);
+            }
+        }
     }
 
-    private void applyConfig(MediaConfig.VideoConfig config) {
+    private void applyVideoConfig(MediaConnection connection) {
+        MediaConfig.VideoConfig config = connection.GetVideoConfig(WMEngine.Media.Video.mid());
         config.EnableFec(true);
         config.EnableRecordLossData(false);
         config.SetPreferedCodec(MediaConfig.WmeCodecType.WmeCodecType_AVC);
         config.SetSelectedCodec(MediaConfig.WmeCodecType.WmeCodecType_AVC);
         config.SetPacketizationMode(MediaConfig.WmePacketizationMode.WmePacketizationMode_1);
-        config.SetMaxBandwidth(videoMaxRxBandwidth);
+        config.SetMaxBandwidth(videoMaxRxBandwidth * 2);
 
         boolean hw = isHardwareCodecEnable();
         config.EnableHWAcceleration(hw, MediaConfig.WmeHWAccelerationConfig.WmeHWAcceleration_Encoder);
         config.EnableHWAcceleration(hw, MediaConfig.WmeHWAccelerationConfig.WmeHWAcceleration_Decoder);
 
-        MediaConfig.WmeVideoCodecCapability videoDecoderCodecCapability = new MediaConfig.WmeVideoCodecCapability();
-        videoDecoderCodecCapability.uProfileLevelID = hw ? 0x420016 : 0x42000D;
-        videoDecoderCodecCapability.max_mbps = hw ? MediaSCR.p720.maxMbps : MediaSCR.p360.maxMbps;
-        videoDecoderCodecCapability.max_fs =  MediaSCR.p1080.maxFs; // hw ? MediaSCR.p720.maxFs : MediaSCR.p360.maxFs;
-        videoDecoderCodecCapability.max_br = (hw ? MediaSCR.p720.maxBr : MediaSCR.p360.maxBr)/1000;
-        videoDecoderCodecCapability.max_fps = hw ? MediaSCR.p720.maxFps : MediaSCR.p360.maxFps;
-        config.SetDecodeParams(MediaConfig.WmeCodecType.WmeCodecType_AVC, videoDecoderCodecCapability);
+        MediaSCR decoderSCR = MediaSCR.get(videoMaxRxBandwidth);
+        MediaConfig.WmeVideoCodecCapability decoderCodec = new MediaConfig.WmeVideoCodecCapability();
+        decoderCodec.uProfileLevelID = decoderSCR.levelId;
+        decoderCodec.max_br = videoMaxRxBandwidth / 1000;
+        decoderCodec.max_mbps = decoderSCR.maxMbps;
+        decoderCodec.max_fs = decoderSCR.maxFs;
+        decoderCodec.max_fps = decoderSCR.maxFps;
+        config.SetDecodeParams(MediaConfig.WmeCodecType.WmeCodecType_AVC, decoderCodec);
 
-        int bitrates = videoMaxTxBandwidth / 1000;
-        int levelId = 0x420016;
-        if (bitrates <= 384) {
-            levelId = 0x42000C;
+        MediaSCR encoderSCR = MediaSCR.get(videoMaxTxBandwidth);
+        int fps = encoderSCR.maxFps / 100;
+        if (!Checker.isEmpty(this.settings)) {
+            AdvancedSetting.VideoMaxTxFPS setting = (AdvancedSetting.VideoMaxTxFPS) this.settings.get(AdvancedSetting.VideoMaxTxFPS.class);
+            if (setting != null && setting.getValue() != null && setting.getValue() > 0 && !setting.getValue().equals(AdvancedSetting.VideoMaxTxFPS.defaultVaule)) {
+                fps = setting.getValue();
+            }
         }
-        else if (bitrates <= 768) {
-            levelId = 0x42000D;
-        }
-        MediaConfig.WmeVideoCodecCapability codecCapability = new MediaConfig.WmeVideoCodecCapability();
-        codecCapability.uProfileLevelID = levelId;
-        codecCapability.max_br = bitrates;
-        codecCapability.max_mbps = 0;
-        codecCapability.max_fs = 0;
-        codecCapability.max_fps = 0;
-        config.SetEncodeParams(MediaConfig.WmeCodecType.WmeCodecType_AVC, codecCapability);
 
+        MediaConfig.WmeVideoCodecCapability encoderCodec = new MediaConfig.WmeVideoCodecCapability();
+        encoderCodec.uProfileLevelID = encoderSCR.levelId;
+        encoderCodec.max_br = videoMaxTxBandwidth / 1000;
+        encoderCodec.max_mbps = encoderSCR.maxMbps;
+        encoderCodec.max_fs = encoderSCR.maxFs;
+        encoderCodec.max_fps = fps * 100;
+        config.SetEncodeParams(MediaConfig.WmeCodecType.WmeCodecType_AVC, encoderCodec);
+
+        Ln.d("Video bandwidth: " + videoMaxTxBandwidth + "/" + videoMaxRxBandwidth + "/" + fps);
+
+        config.EnableCHP(false);
         config.Disable90PVideo(true);
         config.EnableAVCSimulcast(true);
         config.EnableSelfPreviewHorizontalMirror(true);
-        //config.SetInitSubscribeCount(maxNumberStreams);
         if (!Checker.isEmpty(videoPlaybackFile)) {
             config.EnableFileCapture(videoPlaybackFile, true);
         }
+
+        if (!Checker.isEmpty(this.settings)) {
+            AdvancedSetting.VideoEnableDecoderMosaic mosaic = (AdvancedSetting.VideoEnableDecoderMosaic) this.settings.get(AdvancedSetting.VideoEnableDecoderMosaic.class);
+            JSONObject mParams = new JSONObject();
+            if (mosaic != null && mosaic.getValue() != AdvancedSetting.VideoEnableDecoderMosaic.defaultVaule) {
+                try {
+                    mParams.put("enableDecoderMosaic", mosaic.getValue());
+                } catch (Exception e) {
+                    Ln.e(e);
+                }
+            }
+            if (mParams.length() > 0) {
+                JSONObject root = new JSONObject();
+                try {
+                    root.put("video", mParams);
+                } catch (Exception e) {
+                    Ln.e(e);
+                }
+                connection.setParameters(WMEngine.Media.Video.mid(), root.toString());
+            }
+
+            AdvancedSetting.VideoEnableCamera2 camera2 = (AdvancedSetting.VideoEnableCamera2) this.settings.get(AdvancedSetting.VideoEnableCamera2.class);
+            this.enableCamera2 = camera2 == null ? AdvancedSetting.VideoEnableCamera2.defaultVaule : camera2.getValue();
+
+
+        }
+
+        JSONObject root = new JSONObject();
+        try {
+            root.put("enableDPC", true);
+        } catch (Exception e) {
+            Ln.e(e);
+        }
+        connection.setParameters(-1, root.toString());
     }
 }
