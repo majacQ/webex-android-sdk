@@ -796,8 +796,8 @@ public class WmeSession implements ScreenShareContext.OnShareStoppedListener, Me
 
     @Override
     public void onMediaReady(int mid, MediaConnection.MediaDirection direction, MediaConnection.MediaType type, MediaTrack track) {
-        Ln.d("Media.onMediaReady, track=" + track + ", mConn=" + connection + ", mid=" + mid + ", dir=" + direction + ", type=" + type);
         Queue.main.run(() -> {
+            Ln.d("Media.onMediaReady, track=" + track + ", mConn=" + connection + ", mid=" + mid + ", dir=" + direction + ", type=" + type);
             if (type == MediaConnection.MediaType.Video) {
                 if (direction == MediaConnection.MediaDirection.SendOnly) {
                     localVideoTrack.init(track);
@@ -1059,6 +1059,9 @@ public class WmeSession implements ScreenShareContext.OnShareStoppedListener, Me
 
     public void onShareStopped() {
         Ln.d("MediaSessionImpl.onShareStopped");
+        if (observer != null) {
+            observer.onLocalShareStopped();
+        }
     }
 
     public void OnRequestAvatarForMute(boolean mute) {
