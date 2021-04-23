@@ -24,9 +24,13 @@ package com.ciscowebex.androidsdk.phone.internal;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Pair;
@@ -123,6 +127,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
     private List<String> audioEnhancementModels = null;
     private Map<Class<? extends AdvancedSetting>, AdvancedSetting> settings = new HashMap<>();
     private boolean enableBackgroundStream = false;
+    private boolean enableBackgroundConnection = false;
     private boolean enableAudioBNR = false;
     private AudioBRNMode audioBRNMode = AudioBRNMode.HP;
 
@@ -131,6 +136,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
     private MembershipObserver membershipObserver;
     private SpaceObserver spaceObserver;
     private MessageObserver messageObserver;
+    private VideoStreamMode videoStreamMode = VideoStreamMode.COMPOSITED;
 
     public PhoneImpl(Context context, Webex webex, Authenticator authenticator, MediaEngine engine) {
         this.webex = webex;
@@ -266,7 +272,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
             if (mercury != null) {
                 if (foreground) {
                     mercury.tryReconnect();
-                } else if (calls.size() == 0) {
+                } else if (calls.size() == 0 && !enableBackgroundConnection) {
                     mercury.disconnect(false);
                 }
             }
@@ -332,7 +338,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
             if (action == null || action == H264LicenseAction.ACCEPT) {
                 this.canceled = false;
                 Queue.serial.run(() -> {
-                    stopPreview();
+//                    stopPreview();
                     if (callContext != null) {
                         Ln.w("Already calling: " + callContext);
                         Queue.main.run(() -> callback.onComplete(ResultImpl.error("Already calling")));
@@ -417,7 +423,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
                     String correlationId = UUID.randomUUID().toString();
                     //CallAnalyzerReporter.shared.reportJoinRequest(correlationId, null);
                     if (target instanceof CallService.CallableTarget) {
-                        service.call(((CallService.CallableTarget) target).getCallee(), outgoing.getOption(), correlationId, device, localSdp, reachabilities, callResult -> {
+                        service.call(((CallService.CallableTarget) target).getCallee(), outgoing.getOption(), getVideoStreamMode(), correlationId, device, localSdp, reachabilities, callResult -> {
                             if (callResult.getError() != null || callResult.getData() == null) {
                                 Queue.main.run(() -> outgoing.getCallback().onComplete(ResultImpl.error(callResult.getError())));
                                 Queue.serial.yield();
@@ -440,7 +446,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
                                 Queue.serial.yield();
                                 return;
                             }
-                            service.join(url, outgoing.getOption(), correlationId, device, localSdp, reachabilities, joinResult -> {
+                            service.join(url, outgoing.getOption(), getVideoStreamMode(), correlationId, device, localSdp, reachabilities, joinResult -> {
                                 if (joinResult.getError() != null || joinResult.getData() == null) {
                                     Queue.main.run(() -> outgoing.getCallback().onComplete(ResultImpl.error(joinResult.getError())));
                                     Queue.serial.yield();
@@ -469,7 +475,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
                 String localSdp = session.getLocalSdp();
                 incoming.getCall().setMedia(session);
                 //CallAnalyzerReporter.shared.reportJoinRequest(incoming.getCall().getCorrelationId(), incoming.getCall().getModel().getKey());
-                service.join(incoming.getCall().getUrl(), incoming.getOption(), incoming.getCall().getCorrelationId(), device, localSdp, reachability.getFeedback(), joinResult -> {
+                service.join(incoming.getCall().getUrl(), incoming.getOption(), getVideoStreamMode(), incoming.getCall().getCorrelationId(), device, localSdp, reachability.getFeedback(), joinResult -> {
                     if (joinResult.getError() != null || joinResult.getData() == null) {
                         Queue.main.run(() -> incoming.getCallback().onComplete(ResultImpl.error(joinResult.getError())));
                         Queue.serial.yield();
@@ -491,6 +497,8 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
         Queue.serial.run(() -> {
             if (callContext instanceof CallContext.Sharing) {
                 CallImpl call = ((CallContext.Sharing) callContext).getCall();
+                Notification notification = ((CallContext.Sharing) callContext).getNotification();
+                int notificationId = ((CallContext.Sharing) callContext).getNotificationId();
                 CompletionHandler<Void> callback = ((CallContext.Sharing) callContext).getCallback();
                 callContext = null;
                 if (permission == null) {
@@ -532,7 +540,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
                         Queue.serial.yield();
                         return;
                     }
-                    doLocusResponse(new LocusResponse.MediaShare(call, FloorModel.Disposition.GRANTED, permission, callback), Queue.serial);
+                    doLocusResponse(new LocusResponse.MediaShare(call, FloorModel.Disposition.GRANTED, permission, notification, notificationId, callback), Queue.serial);
                 });
             } else {
                 Queue.serial.yield();
@@ -584,6 +592,39 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
     @Override
     public AudioBRNMode getAudioBNRMode() {
         return audioBRNMode;
+    }
+
+    @Override
+    public void setVideoStreamMode(VideoStreamMode videoStreamMode) {
+        this.videoStreamMode = videoStreamMode;
+    }
+
+    @Override
+    public VideoStreamMode getVideoStreamMode() {
+        return videoStreamMode;
+    }
+
+    @Override
+    public String getServiceUrl(ServiceUrlType serviceUrlType) {
+        if (state == State.REGISTERED && device != null) {
+            String key = key(serviceUrlType);
+            if (key != null) {
+                return device.getServiceUrl(key);
+            }
+        }
+        return null;
+    }
+
+    private String key(ServiceUrlType serviceUrlType) {
+        switch (serviceUrlType) {
+            case METRICS:
+                return "metrics";
+            case CLIENT_LOGS:
+                return "clientLogs";
+            case KMS:
+                return "encryption";
+        }
+        return null;
     }
 
     @Override
@@ -689,6 +730,12 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
     public void enableBackgroundStream(boolean enable) {
         Ln.d("Set enableBackgroundStream to " + enable);
         this.enableBackgroundStream = enable;
+    }
+
+    @Override
+    public void enableBackgroundConnection(boolean enable) {
+        Ln.d("Set enableBackgroundStream to " + enable);
+        this.enableBackgroundConnection = enable;
     }
 
     @Override
@@ -894,7 +941,7 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
         });
     }
 
-    void layout(CallImpl call, MediaOption.VideoLayout layout, @Nullable CompletionHandler<Void> callback) {
+    void layout(CallImpl call, MediaOption.CompositedVideoLayout layout, @Nullable CompletionHandler<Void> callback) {
         Queue.serial.run(() -> {
             String url = call.getModel().getSelf() == null ? null : call.getModel().getSelf().getUrl();
             if (url == null) {
@@ -1022,8 +1069,38 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
         });
     }
 
-    void startSharing(CallImpl call, CompletionHandler<Void> callback) {
-        callContext = new CallContext.Sharing(call, callback);
+    private boolean isValidNotification(Notification notification, int notificationId) {
+        if (notification != null && notificationId > 0) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                String channelId = notification.getChannelId();
+                if (channelId != null && !channelId.isEmpty()) {
+                    NotificationManager notifyManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                    for (NotificationChannel channel : notifyManager.getNotificationChannels()) {
+                        if (channel.getId().equals(channelId)) {
+                            Ln.d("Screen share valid notification");
+                            return true;
+                        }
+                    }
+                }
+            } else {
+                Ln.d("Screen share valid notification");
+                return true;
+            }
+        }
+        Ln.d("Screen share invalid notification");
+        return false;
+    }
+
+    void startSharing(CallImpl call, Notification notification, int notificationId, CompletionHandler<Void> callback) {
+        if (context.getApplicationInfo().targetSdkVersion >= 29) {
+            if (!isValidNotification(notification, notificationId)) {
+                if (callback != null) {
+                    callback.onComplete(ResultImpl.error("Invalid Notification"));
+                }
+                return;
+            }
+        }
+        callContext = new CallContext.Sharing(call, notification, notificationId, callback);
         Ln.d("CallContext: " + callContext);
         final Intent intent = new Intent(context, AcquirePermissionActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
@@ -1036,13 +1113,15 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
         Queue.serial.run(() -> {
             if (call.getMedia() == null || !call.getMedia().hasSharing()) {
                 Ln.e("Media option unsupport content share");
-                Queue.main.run(() -> callback.onComplete(ResultImpl.error("Media option unsupport content share")));
+                if (callback != null)
+                    Queue.main.run(() -> callback.onComplete(ResultImpl.error("Media option unsupport content share")));
                 Queue.serial.yield();
                 return;
             }
             if (!call.isSharingFromThisDevice()) {
                 Ln.e("Local share screen not start");
-                Queue.main.run(() -> callback.onComplete(ResultImpl.error("Local share screen not start")));
+                if (callback != null)
+                    Queue.main.run(() -> callback.onComplete(ResultImpl.error("Local share screen not start")));
                 Queue.serial.yield();
                 return;
             }
@@ -1051,17 +1130,19 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
             String url = mediaShare.getUrl();
             if (url == null) {
                 Ln.e("Unsupport media share");
-                Queue.main.run(() -> callback.onComplete(ResultImpl.error("Miss media share url")));
+                if (callback != null)
+                    Queue.main.run(() -> callback.onComplete(ResultImpl.error("Miss media share url")));
                 Queue.serial.yield();
                 return;
             }
             service.update(mediaShare, url, device, result -> {
                 if (result.getError() != null) {
-                    Queue.main.run(() -> callback.onComplete(ResultImpl.error(result.getError())));
+                    if (callback != null)
+                        Queue.main.run(() -> callback.onComplete(ResultImpl.error(result.getError())));
                     Queue.serial.yield();
                     return;
                 }
-                doLocusResponse(new LocusResponse.MediaShare(call, FloorModel.Disposition.RELEASED, null, callback), Queue.serial);
+                doLocusResponse(new LocusResponse.MediaShare(call, FloorModel.Disposition.RELEASED, null, null, -1, callback), Queue.serial);
             });
         });
     }
@@ -1163,7 +1244,21 @@ public class PhoneImpl implements Phone, UIEventHandler.EventObserver, MercurySe
             LocusResponse.MediaShare res = (LocusResponse.MediaShare) response;
             Queue.main.run(() -> {
                 if (res.getIntent() != null && FloorModel.Disposition.GRANTED == res.getDisposition()) {
-                    ScreenShareContext.getInstance().init(context, Activity.RESULT_OK, res.getIntent());
+                    if (context.getApplicationInfo().targetSdkVersion >= 29) {
+                        Ln.d("Start screen share in service");
+                        Intent intent = new Intent(context, ScreenShareForegroundService.class);
+                        intent.putExtra(ScreenShareForegroundService.SCREEN_SHARING_DATA, res.getIntent());
+                        intent.putExtra(ScreenShareForegroundService.SCREEN_SHARING_NOTIFICATION, res.getNotification());
+                        intent.putExtra(ScreenShareForegroundService.SCREEN_SHARING_NOTIFICATION_ID, res.getNotificationId());
+                        context.startService(intent);
+                    } else {
+                        Ln.d("Start screen share directly");
+                        ScreenShareContext.getInstance().init(context, Activity.RESULT_OK, res.getIntent());
+                    }
+                } else if (context.getApplicationInfo().targetSdkVersion >= 29) {
+                    Ln.d("Stop screen share in service");
+                    Intent intent = new Intent(context, ScreenShareForegroundService.class);
+                    context.stopService(intent);
                 }
                 if (res.getCallback() != null) {
                     res.getCallback().onComplete(ResultImpl.success(null));
