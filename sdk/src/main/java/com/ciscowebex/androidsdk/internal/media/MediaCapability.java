@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,17 +24,23 @@ package com.ciscowebex.androidsdk.internal.media;
 
 import android.os.Build;
 import android.os.Environment;
+
 import com.ciscowebex.androidsdk.phone.AdvancedSetting;
 import com.ciscowebex.androidsdk.phone.Phone;
 import com.ciscowebex.androidsdk.utils.Lists;
 import com.github.benoitdion.ln.Ln;
 import com.webex.wme.MediaConfig;
 import com.webex.wme.MediaConnection;
-import me.helloworld.utils.Checker;
+
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+
+import me.helloworld.utils.Checker;
 
 public class MediaCapability {
 
@@ -45,7 +51,7 @@ public class MediaCapability {
             + "\"yv12Capture\":false"
             + "}}}}";
 
-    private static final List<String> DEFAULT_AE_MODLES =  Lists.asList("SM-G93", "SM-G95", "SM-G96", "SM-G97", "SM-N95", "SM-N96", "GM19");
+    private static final List<String> DEFAULT_AE_MODLES = Lists.asList("SM-G93", "SM-G95", "SM-G96", "SM-G97", "SM-N95", "SM-N96", "GM19");
 
     private static final int DEFAULT_MAX_STREAMS = 4;
 
@@ -80,6 +86,10 @@ public class MediaCapability {
     private Map<Class<? extends AdvancedSetting>, AdvancedSetting> settings = null;
 
     private EnumSet<MediaConstraint> constraints = EnumSet.noneOf(MediaConstraint.class);
+
+    private boolean enableAudioBNR = false;
+
+    private Phone.AudioBRNMode audioBRNMode = Phone.AudioBRNMode.HP;
 
     public MediaCapability() {
         setAudioEnhancementModels(null);
@@ -127,10 +137,6 @@ public class MediaCapability {
         return enableCamera2;
     }
 
-    public void enableCamera2(boolean enableCamera2) {
-        this.enableCamera2 = enableCamera2;
-    }
-
     public boolean isAudioEnhancement() {
         return isAudioEnhancement;
     }
@@ -160,6 +166,14 @@ public class MediaCapability {
 
     public void setDefaultCamera(WMEngine.Camera camera) {
         this.camera = camera;
+    }
+
+    public void setEnableAudioBNR(boolean enableAudioBNR) {
+        this.enableAudioBNR = enableAudioBNR;
+    }
+
+    public void setAudioBRNMode(Phone.AudioBRNMode audioBRNMode) {
+        this.audioBRNMode = audioBRNMode;
     }
 
     public void setAudioPlaybackFile(String audioPlaybackFile) {
@@ -250,6 +264,10 @@ public class MediaCapability {
 //            Ln.d("Default Settings: " + deviceSettings);
 //            config.SetDeviceMediaSettings(deviceSettings);
 //        }
+
+        // For SPARK-166469
+        config.SetDeviceMediaSettings("{\"audio\": {\"AECType\": 2,\"Version\": 4, \"AudioMode\": 2, \"CaptureMode\": 20, \"PlaybackMode\": 12}}");
+
         if (isHardwareCodecEnable()) {
             Ln.d("HW Settings: " + hardwareVideoSetting);
             config.SetDeviceMediaSettings(hardwareVideoSetting);
@@ -267,6 +285,10 @@ public class MediaCapability {
         config.EnableRecordLossData(false);
         config.EnableClientMix(1);
         config.SetMaxBandwidth(audioMaxRxBandwidth);
+        config.EnableBNR(enableAudioBNR);
+        if (enableAudioBNR) {
+            config.SetBNRProfileMode(audioBRNMode.getValue());
+        }
         if (!Checker.isEmpty(audioPlaybackFile)) {
             config.EnableFileCapture(audioPlaybackFile, true);
         }
@@ -275,6 +297,16 @@ public class MediaCapability {
     private void applySharingConfig(MediaConnection connection) {
         MediaConfig.ShareConfig config = connection.GetShareConfig(WMEngine.Media.Sharing.mid());
         config.SetMaxBandwidth(sharingMaxRxBandwidth);
+        if (!Checker.isEmpty(this.settings)) {
+            AdvancedSetting.ShareMaxCaptureFPS setting = (AdvancedSetting.ShareMaxCaptureFPS) this.settings.get(AdvancedSetting.ShareMaxCaptureFPS.class);
+            if (setting != null && setting.getValue() != null && setting.getValue() > 0 && !setting.getValue().equals(AdvancedSetting.ShareMaxCaptureFPS.defaultValue)) {
+                int fps = setting.getValue();
+                if (fps > 10) {
+                    fps = 10;
+                }
+                config.SetScreenMaxCaptureFps(fps);
+            }
+        }
     }
 
     private void applyVideoConfig(MediaConnection connection) {
@@ -295,7 +327,7 @@ public class MediaCapability {
         decoderCodec.uProfileLevelID = decoderSCR.levelId;
         decoderCodec.max_br = videoMaxRxBandwidth / 1000;
         decoderCodec.max_mbps = decoderSCR.maxMbps;
-        decoderCodec.max_fs =  decoderSCR.maxFs;
+        decoderCodec.max_fs = decoderSCR.maxFs;
         decoderCodec.max_fps = decoderSCR.maxFps;
         config.SetDecodeParams(MediaConfig.WmeCodecType.WmeCodecType_AVC, decoderCodec);
 
@@ -303,7 +335,7 @@ public class MediaCapability {
         int fps = encoderSCR.maxFps / 100;
         if (!Checker.isEmpty(this.settings)) {
             AdvancedSetting.VideoMaxTxFPS setting = (AdvancedSetting.VideoMaxTxFPS) this.settings.get(AdvancedSetting.VideoMaxTxFPS.class);
-            if (setting != null && setting.getValue() != null && setting.getValue() > 0 && !setting.getValue().equals(setting.getDefaultValue())) {
+            if (setting != null && setting.getValue() != null && setting.getValue() > 0 && !setting.getValue().equals(AdvancedSetting.VideoMaxTxFPS.defaultVaule)) {
                 fps = setting.getValue();
             }
         }
@@ -327,11 +359,11 @@ public class MediaCapability {
         }
 
         if (!Checker.isEmpty(this.settings)) {
-            AdvancedSetting.VideoEnableDecoderMosaic setting = (AdvancedSetting.VideoEnableDecoderMosaic) this.settings.get(AdvancedSetting.VideoEnableDecoderMosaic.class);
+            AdvancedSetting.VideoEnableDecoderMosaic mosaic = (AdvancedSetting.VideoEnableDecoderMosaic) this.settings.get(AdvancedSetting.VideoEnableDecoderMosaic.class);
             JSONObject mParams = new JSONObject();
-            if (setting != null && setting.getValue() != setting.getDefaultValue()) {
+            if (mosaic != null && mosaic.getValue() != AdvancedSetting.VideoEnableDecoderMosaic.defaultVaule) {
                 try {
-                    mParams.put("enableDecoderMosaic", false);
+                    mParams.put("enableDecoderMosaic", mosaic.getValue());
                 } catch (Exception e) {
                     Ln.e(e);
                 }
@@ -345,6 +377,11 @@ public class MediaCapability {
                 }
                 connection.setParameters(WMEngine.Media.Video.mid(), root.toString());
             }
+
+            AdvancedSetting.VideoEnableCamera2 camera2 = (AdvancedSetting.VideoEnableCamera2) this.settings.get(AdvancedSetting.VideoEnableCamera2.class);
+            this.enableCamera2 = camera2 == null ? AdvancedSetting.VideoEnableCamera2.defaultVaule : camera2.getValue();
+
+
         }
 
         JSONObject root = new JSONObject();

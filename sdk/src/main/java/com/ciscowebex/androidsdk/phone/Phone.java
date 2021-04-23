@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,15 +24,11 @@ package com.ciscowebex.androidsdk.phone;
 
 import android.app.AlertDialog;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.view.View;
 
 import com.ciscowebex.androidsdk.CompletionHandler;
-import com.ciscowebex.androidsdk.internal.ResultImpl;
-import com.ciscowebex.androidsdk.internal.model.LocusModel;
-import com.ciscowebex.androidsdk.internal.queue.Queue;
-import com.ciscowebex.androidsdk.utils.WebexId;
 
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -127,187 +123,49 @@ public interface Phone {
     }
 
     /**
-     * The interface for a listener for scheduled call
+     * The options for H.264 video codec license from Cisco Systems, Inc
      *
      * @since 2.6.0
      */
-    interface ScheduledCallListener {
-        abstract class ScheduledCallEvent {
-            private Call call;
-            private LocusModel model;
-
-            protected ScheduledCallEvent(Call call, LocusModel model) {
-                this.call = call;
-                this.model = model;
-            }
-
-            protected Call getCall() {
-                return call;
-            }
-
-            /**
-             * Get the host id of this scheduled call.
-             *
-             * @return the host id of this scheduled call.
-             * @since 2.6.0
-             */
-            public String getHostId() {
-                return new WebexId(WebexId.Type.PEOPLE, WebexId.DEFAULT_CLUSTER, model.getHost().getId()).getBase64Id();
-            }
-
-            /**
-             * Get the host name of this scheduled call.
-             *
-             * @return the host name of this scheduled call.
-             * @since 2.6.0
-             */
-            public String getHostName() {
-                return model.getHost().getName();
-            }
-
-            /**
-             * Get the id of this scheduled call.
-             *
-             * @return the id of this scheduled call.
-             * @since 2.6.0
-             */
-            public String getScheduledCallId() {
-                return model.getMeeting().getMeetingId();
-            }
-
-            /**
-             * Get the start time of this scheduled call.
-             *
-             * @return the start time of this scheduled call.
-             * @since 2.6.0
-             */
-            public Date getStartTime() {
-                return model.getMeeting().getStartTime();
-            }
-
-            /**
-             * Get the duration of this scheduled call.
-             *
-             * @return the duration of this scheduled call.
-             * @since 2.6.0
-             */
-            public int getDurationMinutes() {
-                return model.getMeeting().getDurationMinutes();
-            }
-
-            /**
-             * Get whether the host has joined scheduled call.
-             *
-             * @return whether the host has joined scheduled call.
-             * @since 2.6.0
-             */
-            public boolean isHostJoined() {
-                return model.isHostJoined();
-            }
-
-            /**
-             * Get the count of participants joined and in lobby.
-             *
-             * @return the count of participants joined and in lobby.
-             * @since 2.6.0
-             */
-            public int getJoinedAndInLobbyParticipantCount() {
-                return model.getJoinedAndInLobbyParticipantCount();
-            }
-        }
-
+    enum H264LicenseAction {
         /**
-         * Event when receive a scheduled call
-         *
-         * @since 2.6.0
+         * Indicates that the end user has accepted the term.
          */
-        class ScheduledCallReceived extends ScheduledCallEvent {
-
-            public ScheduledCallReceived(Call call, LocusModel model) {
-                super(call, model);
-            }
-
-            /**
-             * Join the scheduled call, will get a {@link Call} object when join success.
-             *
-             * @param option   {@link MediaOption} of the call.
-             * @param callback a {@link CompletionHandler} to get join result.
-             * @since 2.6.0
-             */
-            public void join(@NonNull MediaOption option, @NonNull CompletionHandler<Call> callback) {
-                getCall().answer(option, result -> {
-                    Queue.main.run(() -> {
-                        if (result.getError() != null || result.getData() == null)
-                            callback.onComplete(ResultImpl.error(result));
-                        else
-                            callback.onComplete((ResultImpl.success(getCall())));
-                    });
-                });
-
-            }
-        }
-
+        ACCEPT,
         /**
-         * Event when the scheduled call has updated
-         *
-         * @since 2.6.0
+         * Indicates that the end user declined the term.
          */
-        class ScheduledCallUpdated extends ScheduledCallEvent {
-            public ScheduledCallUpdated(Call call, LocusModel model) {
-                super(call, model);
-            }
-
-            /**
-             * Join the scheduled call, will get a {@link Call} object when join success.
-             *
-             * @param option   {@link MediaOption} of the call.
-             * @param callback a {@link CompletionHandler} to get join result.
-             * @since 2.6.0
-             */
-            public void join(@NonNull MediaOption option, @NonNull CompletionHandler<Call> callback) {
-                getCall().answer(option, result -> {
-                    Queue.main.run(() -> {
-                        if (result.getError() != null || result.getData() == null)
-                            callback.onComplete(ResultImpl.error(result.getError()));
-                        else
-                            callback.onComplete((ResultImpl.success(getCall())));
-                    });
-                });
-            }
-        }
-
+        DECLINE,
         /**
-         * Event when the scheduled call has removed
-         *
-         * @since 2.6.0
+         * Indicates that the end user wants to view the license.
          */
-        class ScheduledCallRemoved extends ScheduledCallEvent {
-            public ScheduledCallRemoved(Call call, LocusModel model) {
-                super(call, model);
-            }
-        }
-
-        /**
-         * Callback when receive scheduled call event.
-         *
-         * @param event incoming call
-         */
-        void onScheduledCall(ScheduledCallEvent event);
+        VIEW_LICENSE
     }
 
     /**
-     * The listener for scheduled call
+     * The enumeration of audio BNR mode choices, default is HP.
      *
-     * @since 2.6.0
+     * @since 2.7.0
      */
-    ScheduledCallListener getScheduledCallListener();
+    enum AudioBRNMode {
+        /**
+         * Low Power mode.
+         */
+        LP(0),
+        /**
+         * High Performance mode.
+         */
+        HP(1);
+        private final int value;
 
-    /**
-     * Set the listener to listen to the scheduled call event to this Phone.
-     *
-     * @since 2.6.0
-     */
-    void setScheduledCallListener(ScheduledCallListener listener);
+        AudioBRNMode(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
 
     /**
      * The interface for a listener for incoming call
@@ -404,10 +262,10 @@ public interface Phone {
      * Pops up an Alert for the end user to approve the use of H.264 codec license from Cisco Systems, Inc.
      *
      * @param builder  AlertDialog builder
-     * @param callback A closure to be executed when completed. true if the user approve the license , otherwise false.
+     * @param callback A closure to be executed when completed.
      * @since 0.1
      */
-    void requestVideoCodecActivation(@NonNull AlertDialog.Builder builder, @NonNull CompletionHandler<Boolean> callback);
+    void requestVideoCodecActivation(@NonNull AlertDialog.Builder builder, @Nullable CompletionHandler<H264LicenseAction> callback);
 
     /**
      * Prevents the SDK from poping up an Alert for the end user to approve the use of H.264 video codec license from Cisco Systems, Inc.
@@ -436,14 +294,14 @@ public interface Phone {
      * if 0, default value of 64 * 1000 is used.
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_AUDIO}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setAudioMaxRxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum receivning bandwidth of audio stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getAudioMaxRxBandwidth();
 
@@ -454,14 +312,14 @@ public interface Phone {
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_90P}, {@link DefaultBandwidth#MAX_BANDWIDTH_180P},
      *                  {@link DefaultBandwidth#MAX_BANDWIDTH_360P}, {@link DefaultBandwidth#MAX_BANDWIDTH_720P}, or {@link DefaultBandwidth#MAX_BANDWIDTH_1080P}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setVideoMaxRxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum receiving bandwidth of video stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getVideoMaxRxBandwidth();
 
@@ -472,14 +330,14 @@ public interface Phone {
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_90P}, {@link DefaultBandwidth#MAX_BANDWIDTH_180P},
      *                  {@link DefaultBandwidth#MAX_BANDWIDTH_360P}, {@link DefaultBandwidth#MAX_BANDWIDTH_720P}, or {@link DefaultBandwidth#MAX_BANDWIDTH_1080P}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setVideoMaxTxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum sending bandwidth of video stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getVideoMaxTxBandwidth();
 
@@ -489,14 +347,14 @@ public interface Phone {
      * if 0, default value of 4000*1000 is used.
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_SESSION}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setSharingMaxRxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum receiving bandwidth of content sharing stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getSharingMaxRxBandwidth();
 
@@ -516,25 +374,6 @@ public interface Phone {
      * @since 2.1.1
      */
     void setHardwareAccelerationEnabled(boolean enable);
-
-    /**
-     * Returns true if SDK is use android.hardware.camera2.CameraDevice, otherwise, false.
-     *
-     * @return true if SDK is use android.hardware.camera2.CameraDevice, otherwise, false.
-     * @since 2.6.0
-     */
-    boolean isCamera2Enabled();
-
-    /**
-     * Set true is use android.hardware.camera2.CameraDevice,
-     * false to use android.hardware.Camera.
-     * Default is true.
-     * This method is invalid on Android API 21
-     *
-     * @param enableCamera2 true to try to use android.hardware.camera2.CameraDevice, false to use android.hardware.Camera.
-     * @since 2.6.0
-     */
-    void enableCamera2(boolean enableCamera2);
 
     /**
      * Turn on audio enhancement for the specified device models. By default,
@@ -620,12 +459,63 @@ public interface Phone {
     void enableBackgroundStream(boolean enable);
 
     /**
+     * Set advanced setings for call. Only effective if set before the start of call.
+     * <p>
+     * For example, Phone.setAdvancedSetting(new VideoMaxTxFPS(30));
+     *
+     * @see AdvancedSetting
      * @since 2.6.0
      */
     void setAdvancedSetting(AdvancedSetting setting);
 
     /**
+     * Returns value of the advanced seting that has been set.
+     * <p>
+     * For example, AdvancedSetting setting = Phone.getAdvancedSetting(VideoMaxTxFPS.class);
+     *
+     * @see AdvancedSetting
      * @since 2.6.0
      */
     AdvancedSetting getAdvancedSetting(Class<? extends AdvancedSetting> clz);
+
+    /**
+     * Cancel the currently outgoing call that has not been connected.
+     *
+     * @since 2.6.0
+     */
+    void cancel();
+
+    /**
+     * Enable audio background noise removal. Default is false
+     *
+     * @param enable true to open audio background noise removal, else will close. Default is false.
+     * @since 2.7.0
+     */
+    void enableAudioBNR(boolean enable);
+
+    /**
+     * True if audio background noise removal is open, otherwise false.
+     *
+     * @return true if audio background noise removal is open, otherwise false.
+     * @since 2.7.0
+     */
+    boolean isAudioBNREnable();
+
+    /**
+     * Set the audio background noise removal mode, default value is {@link AudioBRNMode#HP}.
+     * This method only effective if set {@link Phone#enableAudioBNR(boolean)} to true.
+     *
+     * @param mode the audio background noise removal mode.
+     * @since 2.7.0
+     */
+    void setAudioBNRMode(AudioBRNMode mode);
+
+    /**
+     * Return the audio background noise removal mode.
+     *
+     * @return the audio background noise removal mode.
+     * @see AudioBRNMode
+     * @since 2.7.0
+     */
+    AudioBRNMode getAudioBNRMode();
 }

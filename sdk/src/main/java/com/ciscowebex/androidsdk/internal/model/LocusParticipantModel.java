@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -237,18 +237,18 @@ public class LocusParticipantModel {
     }
 
     public boolean isWebExUser() {
-        return isDeviceType(Device.WEBEX_DEVICE_TYPE);
+        return isDeviceType(Device.Type.WEBEX);
     }
 
     public boolean isSipDevice() {
-        return isDeviceType(Device.SIP_DEVICE_TYPE);
+        return isDeviceType(Device.Type.SIP);
     }
 
-    public boolean isDeviceType(String deviceType) {
+    public boolean isDeviceType(Device.Type type) {
         List<LocusParticipantDeviceModel> deviceList = this.getDevices();
         if (deviceList != null) {
             for (LocusParticipantDeviceModel d : deviceList) {
-                if (deviceType.equalsIgnoreCase(d.getDeviceType())) {
+                if (type.getTypeName().equalsIgnoreCase(d.getDeviceType())) {
                     return true;
                 }
             }

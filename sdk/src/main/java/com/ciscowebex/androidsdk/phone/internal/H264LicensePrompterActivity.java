@@ -22,31 +22,44 @@
 
 package com.ciscowebex.androidsdk.phone.internal;
 
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.view.WindowManager;
 import com.ciscowebex.androidsdk.CompletionHandler;
-import com.ciscowebex.androidsdk.auth.Authenticator;
-import com.ciscowebex.androidsdk.internal.Device;
 import com.ciscowebex.androidsdk.internal.ResultImpl;
-import com.ciscowebex.androidsdk.internal.ServiceReqeust;
+import com.ciscowebex.androidsdk.phone.Phone;
+import com.github.benoitdion.ln.Ln;
 
-public class UnregisterOperation implements Runnable {
+public class H264LicensePrompterActivity extends Activity {
 
-    private Authenticator authenticator;
-
-    private Device device;
-
-    private CompletionHandler<Void> callback;
-
-    public UnregisterOperation(Authenticator authenticator, Device device, CompletionHandler<Void> callback) {
-        this.authenticator = authenticator;
-        this.device = device;
-        this.callback = callback;
-    }
+    public static H264LicensePrompter PROMPTER;
+    public static CompletionHandler<Phone.H264LicenseAction> CALLBACK;
 
     @Override
-    public void run() {
-        String deviceUrl = device.getDeviceUrl();
-        if (deviceUrl != null) {
-            ServiceReqeust.make(deviceUrl).delete().auth(authenticator).error(callback).async(data -> callback.onComplete(ResultImpl.success(null)));
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+
+        if (PROMPTER == null) {
+            Ln.d("No H264LicensePrompter in activity");
+            finish();
+            if (CALLBACK != null) {
+                CALLBACK.onComplete(ResultImpl.success(Phone.H264LicenseAction.ACCEPT));
+                CALLBACK = null;
+            }
+        }
+        else {
+            PROMPTER.showUI(new AlertDialog.Builder(this), result -> {
+                finish();
+                if (CALLBACK != null) {
+                    CALLBACK.onComplete(result);
+                    CALLBACK = null;
+                }
+            });
         }
     }
+
 }

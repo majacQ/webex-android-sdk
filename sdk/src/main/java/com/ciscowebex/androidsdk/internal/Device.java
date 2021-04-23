@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,21 +36,30 @@ import java.util.Map;
 
 public class Device {
 
+    public enum Type {
+
+        ANDROID_CLIENT("ANDROID"),
+        ANDROID_MEDIA_ENGINE("WME"),
+        ANDROID_SDK("TEAMS_SDK_ANDROID"),
+        WEB_CLIENT("WEB"),
+        SIP("SIP"),
+        WEBEX("WEBEX"),
+        WEBEX_SHARE("SPARK_SHARE");
+
+        private String typeName;
+
+        Type(String name) {
+            this.typeName = name;
+        }
+
+        public String getTypeName() {
+            return typeName;
+        }
+
+    }
+
     public static final String DEVICE_URL = "DEVICE_URL";
     public static final String DEVICE_ID = "DEVICE_ID";
-
-    public static final String SPARKBOARD_DEVICE_TYPE = "SPARK_BOARD";
-    public static final String SPARKBOARD_MEDIA_ENGINE_TYPE = "ACANO_MEDIA_ENGINE";
-    public static final String ANDROID_DEVICE_TYPE = "ANDROID";
-    public static final String ANDROID_MEDIA_ENGINE_TYPE = "WME";
-    public static final String UC_DEVICE_TYPE = "UC";
-    public static final String TP_DEVICE_TYPE = "TP_ENDPOINT";
-    public static final String PROVISIONAL_DEVICE_TYPE = "PROVISIONAL";
-    public static final String SIP_DEVICE_TYPE = "SIP";
-    public static final String WEBEX_DEVICE_TYPE = "WEBEX";
-    public static final String WEBEX_SHARE_TYPE = "SPARK_SHARE";
-    public static final String WEB_DEVICE_TYPE = "WEB";
-
     private static final String MERCURY_REGISTRATION_QUERIES = "?mercuryRegistrationStatus=true";
 
     private String deviceType;
@@ -65,7 +74,7 @@ public class Device {
 
     public Device(DeviceModel device, RegionModel region, ServicesClusterModel cluster) {
         Ln.d("Device: " + Json.get().toJson(device));
-        this.deviceType = ANDROID_DEVICE_TYPE;
+        this.deviceType = Type.ANDROID_SDK.getTypeName();
         this.deviceModel = device;
         this.regionModel = region;
         this.clusterUrls = cluster.getClusterUrls();

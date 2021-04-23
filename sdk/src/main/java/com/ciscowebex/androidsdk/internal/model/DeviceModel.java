@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +21,6 @@
  */
 
 package com.ciscowebex.androidsdk.internal.model;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class DeviceModel {
 
