@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import com.ciscowebex.androidsdk.internal.Service;
+import com.ciscowebex.androidsdk.internal.queue.Queue;
 import com.ciscowebex.androidsdk.internal.queue.Scheduler;
 import com.ciscowebex.androidsdk.utils.NetworkUtils;
 import com.github.benoitdion.ln.Ln;
@@ -119,14 +120,16 @@ public class NetworkReachability extends BroadcastReceiver {
             boolean currentIsBehindProxy = false;
             if (NetworkUtils.isBehindProxy()) {
                 currentIsBehindProxy = true;
-                OkHttpClient client = new OkHttpClient().newBuilder().proxyAuthenticator(new ProxyCheckAuthenticator()).build();
-                Request request = new Request.Builder().url(Service.Wdm.baseUrl(null) + "/").build();
-                try {
-                    Response response = client.newCall(request).execute();
-                    Ln.d("response.code() = " + response.code());
-                } catch (IOException ex) {
-                    Ln.d("proxyRequiresAuth: " + currentNetworkConnectionStatus.isProxyRequiresAuth());
-                }
+                Queue.background.run(() -> {
+                    OkHttpClient client = new OkHttpClient().newBuilder().proxyAuthenticator(new ProxyCheckAuthenticator()).build();
+                    Request request = new Request.Builder().url(Service.Wdm.baseUrl(null) + "/ping").build();
+                    try {
+                        Response response = client.newCall(request).execute();
+                        Ln.d("response.code() = " + response.code());
+                    } catch (IOException ex) {
+                        Ln.d("proxyRequiresAuth: " + currentNetworkConnectionStatus.isProxyRequiresAuth());
+                    }
+                });
             }
             int currentNetworkType  = info.getType();
             String currentIPAddress = NetworkUtils.getLocalIpAddress();
@@ -156,6 +159,7 @@ public class NetworkReachability extends BroadcastReceiver {
             if (null == choosenMethod) {
                 Ln.d("Unknown proxy authetication method.");
             }
+            // TODO Support auth proxy
             return null;
         }
     }

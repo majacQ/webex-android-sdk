@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,9 @@
 
 package com.ciscowebex.androidsdk.phone.internal;
 
+import android.app.Notification;
 import android.content.Intent;
+
 import com.ciscowebex.androidsdk.CompletionHandler;
 import com.ciscowebex.androidsdk.internal.Device;
 import com.ciscowebex.androidsdk.internal.model.FloorModel;
@@ -110,11 +112,15 @@ public interface LocusResponse {
 
         private Intent sharing;
         private FloorModel.Disposition disposition;
+        private Notification notification;
+        private int notificationId;
 
-        public MediaShare(CallImpl call, FloorModel.Disposition disposition, Intent sharing, CompletionHandler<Void> callback) {
+        public MediaShare(CallImpl call, FloorModel.Disposition disposition, Intent sharing, Notification notification, int notificationId, CompletionHandler<Void> callback) {
             super(call, callback);
             this.sharing = sharing;
             this.disposition = disposition;
+            this.notification = notification;
+            this.notificationId = notificationId;
         }
 
         public Intent getIntent() {
@@ -123,6 +129,14 @@ public interface LocusResponse {
 
         public FloorModel.Disposition getDisposition() {
             return disposition;
+        }
+
+        public Notification getNotification() {
+            return notification;
+        }
+
+        public int getNotificationId() {
+            return notificationId;
         }
     }
 

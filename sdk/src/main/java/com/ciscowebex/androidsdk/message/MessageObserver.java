@@ -1,6 +1,29 @@
+/*
+ * Copyright 2016-2021 Cisco Systems Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package com.ciscowebex.androidsdk.message;
 
 import com.ciscowebex.androidsdk.WebexEvent;
+import com.ciscowebex.androidsdk.internal.Credentials;
 import com.ciscowebex.androidsdk.internal.model.ActivityModel;
 
 import java.util.List;
@@ -21,8 +44,8 @@ public interface MessageObserver {
     /**
      * The event when a new message has arrived.
      *
-     * @deprecated
      * @since 1.4.0
+     * @deprecated
      */
     @Deprecated
     class MessageArrived extends WebexEvent.Base implements MessageEvent {
@@ -99,7 +122,7 @@ public interface MessageObserver {
     }
 
     /**
-     * The event when an old message has been updated, include received and self sent message.
+     * The event when an existing message has been updated.
      *
      * @since 2.6.0
      */
@@ -112,8 +135,7 @@ public interface MessageObserver {
         }
 
         /**
-         * Return the updated message ID.
-         * @return The updated message ID.
+         * Return id of the updated message.
          */
         public String getMessageId() {
             return messageId;
@@ -121,11 +143,11 @@ public interface MessageObserver {
     }
 
     /**
-     * The file thumbnails of a message has been updated. Should replace the old message's file list.
+     * The thumbnails of the attached files in message has been updated.
      *
      * @since 2.6.0
      */
-    class MessageFileThumbnailsUpdated extends MessageUpdated{
+    class MessageFileThumbnailsUpdated extends MessageUpdated {
         private List<RemoteFile> files;
 
         protected MessageFileThumbnailsUpdated(String messageId, ActivityModel activity, List<RemoteFile> files) {
@@ -140,6 +162,30 @@ public interface MessageObserver {
          */
         public List<RemoteFile> getFiles() {
             return files;
+        }
+    }
+
+    /**
+     * The message has been edited. Developer could call {@link Message#update(MessageEdited)} to update original message.
+     *
+     * @since 2.8.0
+     */
+    class MessageEdited extends MessageUpdated {
+        private ActivityModel activity;
+        private Credentials user;
+
+        protected MessageEdited(String messageId, Credentials user, ActivityModel activity) {
+            super(messageId, activity);
+            this.activity = activity;
+            this.user = user;
+        }
+
+        ActivityModel getActivity() {
+            return activity;
+        }
+
+        Credentials getUser() {
+            return user;
         }
     }
 

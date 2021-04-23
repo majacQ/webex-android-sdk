@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -102,13 +102,10 @@ public class Webex {
         }
         this.authenticator = authenticator;
         engine = new MediaEngine(application.getApplicationContext(), LogLevel.DEBUG);
-        phone = new PhoneImpl(application.getApplicationContext(), authenticator, engine);
+        phone = new PhoneImpl(application.getApplicationContext(), this, authenticator, engine);
         messages = new MessageClientImpl(application.getApplicationContext(), phone);
         memberships = new MembershipClientImpl(phone);
         spaces = new SpaceClientImpl(phone);
-        phone.addActivityListener(messages);
-        phone.addActivityListener(memberships);
-        phone.addActivityListener(spaces);
         checker = new BackgroundChecker(application, phone);
         phone.setChecker(checker);
         setLogLevel(LogLevel.DEBUG);

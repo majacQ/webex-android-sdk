@@ -20,17 +20,17 @@
  * THE SOFTWARE.
  */
 
-package com.ciscowebex.androidsdk.internal.model;
+package com.ciscowebex.androidsdk.phone.internal;
 
-import java.util.HashMap;
-import java.util.Map;
+import android.support.annotation.NonNull;
+import com.ciscowebex.androidsdk.internal.model.LocusScheduledMeetingModel;
+import com.ciscowebex.androidsdk.internal.model.LocusStateModel;
+import com.ciscowebex.androidsdk.phone.CallSchedule;
 
-public class ServiceHostModel {
+public class InternalCallSchedule extends CallSchedule {
 
-    private Map<String, String> serviceLinks = new HashMap<>();
-
-    public String getServiceUrl(String key) {
-        return serviceLinks.get(key);
+    public InternalCallSchedule(@NonNull LocusScheduledMeetingModel meeting, @NonNull LocusStateModel state) {
+        super(meeting, state);
     }
 
 }

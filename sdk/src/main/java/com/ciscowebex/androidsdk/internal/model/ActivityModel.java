@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,16 +23,10 @@
 package com.ciscowebex.androidsdk.internal.model;
 
 import android.support.annotation.NonNull;
-
 import com.ciscowebex.androidsdk.internal.Credentials;
 import com.ciscowebex.androidsdk.internal.crypto.KeyObject;
-import com.ciscowebex.androidsdk.message.Mention;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-
 import me.helloworld.utils.Checker;
+import java.util.Comparator;
 
 public class ActivityModel extends ObjectModel {
 
@@ -41,7 +35,7 @@ public class ActivityModel extends ObjectModel {
         mute, unmute, favorite, unfavorite, share, start, join, decline, reject,
         cancel, terminate, schedule, hide, unhide, lock, unlock, assignModerator, unassignModerator,
         delete, tombstone, archive, unarchive,
-        tag, untag, assign, unassign, noops,
+        tag, untag, assign,  unassign, noops,
         addMicroappInstance, deleteMicroappInstance, set, unset
     }
 
@@ -113,14 +107,6 @@ public class ActivityModel extends ObjectModel {
         return person != null && personId.equals(person.getId());
     }
 
-    public boolean isAddParticipant() {
-        return verb == Verb.add && object != null && object.isPerson() && target != null && target.isConversation();
-    }
-
-    public boolean isCreateConversation() {
-        return verb == Verb.create && object != null && object.isConversation();
-    }
-
     public boolean isTag() {
         return verb == Verb.tag && object != null && object.isConversation();
     }
@@ -146,7 +132,7 @@ public class ActivityModel extends ObjectModel {
     }
 
     public boolean isShareImage() {
-        return verb == Verb.share && object instanceof ContentModel && ((ContentModel) object).isImage();
+        return verb == Verb.share && object instanceof ContentModel &&  ((ContentModel) object).isImage();
     }
 
     public boolean isUpdateTitleAndSummaryActivity() {
@@ -167,14 +153,6 @@ public class ActivityModel extends ObjectModel {
 
     public boolean isLocusActivity() {
         return object != null && object.isLocus();
-    }
-
-    public boolean isLeaveActivity() {
-        return verb == Verb.leave && (object == null || object.isPerson()) && target != null && target.isConversation();
-    }
-
-    public boolean isUpdateContent() {
-        return verb == Verb.update && object != null && object.isContent();
     }
 
     public boolean isUpdateKeyActivity() {
@@ -227,13 +205,16 @@ public class ActivityModel extends ObjectModel {
     public String getConversationId() {
         ObjectModel target = getTarget();
         ObjectModel object = getObject();
-        if (target != null && ObjectModel.Type.conversation.equals(target.getObjectType())) {
+        if (target != null &&  ObjectModel.Type.conversation.equals(target.getObjectType())) {
             return target.getId();
-        } else if (target != null && ObjectModel.Type.team.equals(target.getObjectType())) {
+        }
+        else if (target != null && ObjectModel.Type.team.equals(target.getObjectType())) {
             return ((TeamModel) target).getGeneralConversationUuid();
-        } else if (object != null && ObjectModel.Type.conversation.equals(object.getObjectType())) {
+        }
+        else if (object != null && ObjectModel.Type.conversation.equals(object.getObjectType())) {
             return object.getId();
-        } else if (object != null && ObjectModel.Type.team.equals(object.getObjectType())) {
+        }
+        else if (object != null && ObjectModel.Type.team.equals(object.getObjectType())) {
             return ((TeamModel) object).getGeneralConversationUuid();
         } else {
             return null;
@@ -245,9 +226,11 @@ public class ActivityModel extends ObjectModel {
         ObjectModel object = getObject();
         if (target != null && ObjectModel.Type.conversation.equals(target.getObjectType())) {
             return target.getUrl();
-        } else if (object != null && ObjectModel.Type.conversation.equals(object.getObjectType())) {
+        }
+        else if (object != null && ObjectModel.Type.conversation.equals(object.getObjectType())) {
             return object.getUrl();
-        } else {
+        }
+        else {
             String activityUrl = this.getUrl();
             return activityUrl.substring(0, activityUrl.lastIndexOf("/activities/")) + "/conversations/" + getConversationId();
         }
@@ -296,11 +279,11 @@ public class ActivityModel extends ObjectModel {
         return ret;
     }
 
-    public boolean isSelfMention(@NonNull Credentials credentials, long lastJoinedDate) {
+    public boolean isSelfMentioned(@NonNull Credentials credentials, long lastJoinedDate) {
         return isPersonallyMentioned(credentials) || isIncludedInGroupMention(credentials, lastJoinedDate);
     }
 
-    public boolean isAllMention(long lastJoinedDate) {
+    public boolean isAllMentioned(long lastJoinedDate) {
         if (!(getObject() instanceof MentionableModel)) {
             return false;
         }
@@ -334,7 +317,7 @@ public class ActivityModel extends ObjectModel {
     }
 
     private boolean isIncludedInGroupMention(@NonNull Credentials credentials, long lastJoinedDate) {
-        if (!(getObject() instanceof MentionableModel)) {
+        if (!(getObject() instanceof  MentionableModel)) {
             return false;
         }
         MentionableModel object = (MentionableModel) getObject();
@@ -350,18 +333,5 @@ public class ActivityModel extends ObjectModel {
             }
         }
         return false;
-    }
-
-    public List<Mention.Person> getMentionedPersons() {
-        List<Mention.Person> persons = new ArrayList<>();
-        if ((getObject() instanceof MentionableModel)) {
-            MentionableModel object = (MentionableModel) getObject();
-            if (object.getMentions() != null) {
-                for (PersonModel mention : object.getMentions().getItems()) {
-                    persons.add(new Mention.Person(mention.getId()));
-                }
-            }
-        }
-        return persons;
     }
 }

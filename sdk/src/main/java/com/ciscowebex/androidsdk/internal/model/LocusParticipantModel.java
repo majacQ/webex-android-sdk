@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,11 @@
 package com.ciscowebex.androidsdk.internal.model;
 
 import android.support.annotation.Nullable;
+
 import com.ciscowebex.androidsdk.internal.Device;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LocusParticipantModel {
 
@@ -34,7 +36,8 @@ public class LocusParticipantModel {
     }
 
     public enum IntentType {
-        HELD, HOLDING, JOIN, LEAVE, MOVE_MEDIA, NONE, OBSERVE, WAIT }
+        HELD, HOLDING, JOIN, LEAVE, MOVE_MEDIA, NONE, OBSERVE, WAIT
+    }
 
     public enum State {
         /* the participant is not in the locus */
@@ -237,18 +240,18 @@ public class LocusParticipantModel {
     }
 
     public boolean isWebExUser() {
-        return isDeviceType(Device.WEBEX_DEVICE_TYPE);
+        return isDeviceType(Device.Type.WEBEX);
     }
 
     public boolean isSipDevice() {
-        return isDeviceType(Device.SIP_DEVICE_TYPE);
+        return isDeviceType(Device.Type.SIP);
     }
 
-    public boolean isDeviceType(String deviceType) {
+    public boolean isDeviceType(Device.Type type) {
         List<LocusParticipantDeviceModel> deviceList = this.getDevices();
         if (deviceList != null) {
             for (LocusParticipantDeviceModel d : deviceList) {
-                if (deviceType.equalsIgnoreCase(d.getDeviceType())) {
+                if (type.getTypeName().equalsIgnoreCase(d.getDeviceType())) {
                     return true;
                 }
             }
@@ -266,8 +269,7 @@ public class LocusParticipantModel {
     }
 
     public boolean isValidCiUser() {
-        return (getType() == LocusParticipantModel.Type.USER && !getPerson().isExternal()) ||
-                getType() == LocusParticipantModel.Type.RESOURCE_ROOM;
+        return getType() == LocusParticipantModel.Type.USER || getType() == LocusParticipantModel.Type.RESOURCE_ROOM;
     }
 
     public boolean isUserOrResourceRoom() {
@@ -360,10 +362,8 @@ public class LocusParticipantModel {
     }
 
     public boolean isLefted(String deviceUrl) {
-        if (state == State.LEFT) {
-            return true;
-        }
-        return getDevice(deviceUrl) == null;
+        LocusParticipantDeviceModel device = getDevice(deviceUrl);
+        return state == State.LEFT || device == null || device.getState() == State.LEFT;
     }
 
     public boolean isJoined(String deviceUrl) {

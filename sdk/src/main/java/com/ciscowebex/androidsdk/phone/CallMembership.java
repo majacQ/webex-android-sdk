@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
  */
 
 package com.ciscowebex.androidsdk.phone;
+
+import android.support.annotation.Nullable;
 
 /**
  * A data type represents a relationship between *Call* and *Person* at Cisco Webex cloud.
@@ -98,10 +100,12 @@ public interface CallMembership {
     State getState();
 
     /**
-     * @return The email address of the person in this CallMembership.
-     * @since 0.1
+     * Notice, removed the getEmail() function, due to the email address can no longer get, since privacy protection reason.
+     * Please use this function to show a display name instead.
+     * @return The display name of the person in this CallMembership.
+     * @since 2.8.0
      */
-    String getEmail();
+    String getDisplayName();
 
     /**
      * @return The SIP address of the person in this CallMembership.
@@ -138,4 +142,17 @@ public interface CallMembership {
      * @since 2.5.0
      */
     boolean isActiveSpeaker();
+
+    /**
+     * @return True is the `CallMembership` is muted by other. Otherwise, false.
+     * @since 2.7.0
+     */
+    boolean isAudioMutedControlled();
+
+    /**
+     * @return The ID of the person who muted/unmuted this `CallMembership`
+     * @since 2.7.0
+     */
+    @Nullable
+    String audioModifiedBy();
 }

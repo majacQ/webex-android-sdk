@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,7 +57,7 @@ public class RegisterOperation implements Runnable {
             String countryCode = Objects.defaultIfNull(region.getCountryCode(), "US");
             String regionCode = Objects.defaultIfNull(region.getRegionCode(), "US-WEST");
             Map<String, Object> deviceInfo = new HashMap<>();
-            deviceInfo.put("deviceType", Device.ANDROID_DEVICE_TYPE);
+            deviceInfo.put("deviceType", Device.Type.ANDROID_SDK.getTypeName());
             deviceInfo.put("countryCode", countryCode);
             deviceInfo.put("regionCode", regionCode);
             deviceInfo.put("ttl", String.valueOf(TimeUnit.DAYS.toSeconds(180)));

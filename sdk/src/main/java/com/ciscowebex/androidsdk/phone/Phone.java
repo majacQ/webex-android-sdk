@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@ package com.ciscowebex.androidsdk.phone;
 
 import android.app.AlertDialog;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.view.View;
 
 import com.ciscowebex.androidsdk.CompletionHandler;
@@ -40,6 +41,51 @@ import java.util.List;
  * @since 0.1
  */
 public interface Phone {
+    /**
+     * The enumeration of service url.
+     *
+     * @since 2.8.0
+     */
+    enum ServiceUrlType {
+        /**
+         * Metrics service url.
+         *
+         * @since 2.8.0
+         */
+        METRICS,
+        /**
+         * Client logs service url.
+         *
+         * @since 2.8.0
+         */
+        CLIENT_LOGS,
+        /**
+         * KMS service url.
+         *
+         * @since 2.8.0
+         */
+        KMS
+    }
+
+    /**
+     * The enumeration of remote video stream.
+     *
+     * @since 2.8.0
+     */
+    enum VideoStreamMode {
+        /**
+         * Composite remote videos as one video stream
+         *
+         * @since 2.8.0
+         */
+        COMPOSITED,
+        /**
+         * Remote videos are different streams
+         *
+         * @since 2.8.0
+         */
+        AUXILIARY
+    }
 
     /**
      * The enumeration of Camera facing modes.
@@ -118,6 +164,51 @@ public interface Phone {
 
         public int getValue() {
             return id;
+        }
+    }
+
+    /**
+     * The options for H.264 video codec license from Cisco Systems, Inc
+     *
+     * @since 2.6.0
+     */
+    enum H264LicenseAction {
+        /**
+         * Indicates that the end user has accepted the term.
+         */
+        ACCEPT,
+        /**
+         * Indicates that the end user declined the term.
+         */
+        DECLINE,
+        /**
+         * Indicates that the end user wants to view the license.
+         */
+        VIEW_LICENSE
+    }
+
+    /**
+     * The enumeration of audio BNR mode choices, default is HP.
+     *
+     * @since 2.7.0
+     */
+    enum AudioBRNMode {
+        /**
+         * Low Power mode.
+         */
+        LP(0),
+        /**
+         * High Performance mode.
+         */
+        HP(1);
+        private final int value;
+
+        AudioBRNMode(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
         }
     }
 
@@ -216,10 +307,10 @@ public interface Phone {
      * Pops up an Alert for the end user to approve the use of H.264 codec license from Cisco Systems, Inc.
      *
      * @param builder  AlertDialog builder
-     * @param callback A closure to be executed when completed. true if the user approve the license , otherwise false.
+     * @param callback A closure to be executed when completed.
      * @since 0.1
      */
-    void requestVideoCodecActivation(@NonNull AlertDialog.Builder builder, @NonNull CompletionHandler<Boolean> callback);
+    void requestVideoCodecActivation(@NonNull AlertDialog.Builder builder, @Nullable CompletionHandler<H264LicenseAction> callback);
 
     /**
      * Prevents the SDK from poping up an Alert for the end user to approve the use of H.264 video codec license from Cisco Systems, Inc.
@@ -248,14 +339,14 @@ public interface Phone {
      * if 0, default value of 64 * 1000 is used.
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_AUDIO}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setAudioMaxRxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum receivning bandwidth of audio stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getAudioMaxRxBandwidth();
 
@@ -266,14 +357,14 @@ public interface Phone {
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_90P}, {@link DefaultBandwidth#MAX_BANDWIDTH_180P},
      *                  {@link DefaultBandwidth#MAX_BANDWIDTH_360P}, {@link DefaultBandwidth#MAX_BANDWIDTH_720P}, or {@link DefaultBandwidth#MAX_BANDWIDTH_1080P}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setVideoMaxRxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum receiving bandwidth of video stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getVideoMaxRxBandwidth();
 
@@ -284,14 +375,14 @@ public interface Phone {
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_90P}, {@link DefaultBandwidth#MAX_BANDWIDTH_180P},
      *                  {@link DefaultBandwidth#MAX_BANDWIDTH_360P}, {@link DefaultBandwidth#MAX_BANDWIDTH_720P}, or {@link DefaultBandwidth#MAX_BANDWIDTH_1080P}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setVideoMaxTxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum sending bandwidth of video stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getVideoMaxTxBandwidth();
 
@@ -301,14 +392,14 @@ public interface Phone {
      * if 0, default value of 4000*1000 is used.
      *
      * @param bandwidth the suggest value could be {@link DefaultBandwidth#MAX_BANDWIDTH_SESSION}.
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     void setSharingMaxRxBandwidth(int bandwidth);
 
     /**
      * Return the current maximum receiving bandwidth of content sharing stream.
      *
-     * @since 2.5.0.2
+     * @since 2.6.0
      */
     int getSharingMaxRxBandwidth();
 
@@ -328,25 +419,6 @@ public interface Phone {
      * @since 2.1.1
      */
     void setHardwareAccelerationEnabled(boolean enable);
-
-    /**
-     * Returns true if SDK is use android.hardware.camera2.CameraDevice, otherwise, false.
-     *
-     * @return true if SDK is use android.hardware.camera2.CameraDevice, otherwise, false.
-     * @since 2.6.0
-     */
-    boolean isCamera2Enabled();
-
-    /**
-     * Set true is use android.hardware.camera2.CameraDevice,
-     * false to use android.hardware.Camera.
-     * Default is true.
-     * This method is invalid on Android API 21
-     *
-     * @param enableCamera2 true to try to use android.hardware.camera2.CameraDevice, false to use android.hardware.Camera.
-     * @since 2.6.0
-     */
-    void enableCamera2(boolean enableCamera2);
 
     /**
      * Turn on audio enhancement for the specified device models. By default,
@@ -432,12 +504,98 @@ public interface Phone {
     void enableBackgroundStream(boolean enable);
 
     /**
+     * Set true to keep Webex server connection when minimize app. Default is false.
+     * When set to true, app will receive notifications in background, include incoming calls, messages, space updates, membership updates, etc.
+     *
+     * @param enable
+     * @since 2.8.0
+     */
+    void enableBackgroundConnection(boolean enable);
+
+    /**
+     * Set advanced setings for call. Only effective if set before the start of call.
+     * <p>
+     * For example, Phone.setAdvancedSetting(new VideoMaxTxFPS(30));
+     *
+     * @see AdvancedSetting
      * @since 2.6.0
      */
     void setAdvancedSetting(AdvancedSetting setting);
 
     /**
+     * Returns value of the advanced seting that has been set.
+     * <p>
+     * For example, AdvancedSetting setting = Phone.getAdvancedSetting(VideoMaxTxFPS.class);
+     *
+     * @see AdvancedSetting
      * @since 2.6.0
      */
     AdvancedSetting getAdvancedSetting(Class<? extends AdvancedSetting> clz);
+
+    /**
+     * Cancel the currently outgoing call that has not been connected.
+     *
+     * @since 2.6.0
+     */
+    void cancel();
+
+    /**
+     * Enable audio background noise removal. Default is false
+     *
+     * @param enable true to open audio background noise removal, else will close. Default is false.
+     * @since 2.7.0
+     */
+    void enableAudioBNR(boolean enable);
+
+    /**
+     * True if audio background noise removal is open, otherwise false.
+     *
+     * @return true if audio background noise removal is open, otherwise false.
+     * @since 2.7.0
+     */
+    boolean isAudioBNREnable();
+
+    /**
+     * Set the audio background noise removal mode, default value is {@link AudioBRNMode#HP}.
+     * This method only effective if set {@link Phone#enableAudioBNR(boolean)} to true.
+     *
+     * @param mode the audio background noise removal mode.
+     * @since 2.7.0
+     */
+    void setAudioBNRMode(AudioBRNMode mode);
+
+    /**
+     * Return the audio background noise removal mode.
+     *
+     * @return the audio background noise removal mode.
+     * @see AudioBRNMode
+     * @since 2.7.0
+     */
+    AudioBRNMode getAudioBNRMode();
+
+    /**
+     * Set the video stream mode, default value is {@link VideoStreamMode#COMPOSITED}.
+     *
+     * @param videoStreamMode the video stream mode.
+     * @since 2.8.0
+     */
+    void setVideoStreamMode(VideoStreamMode videoStreamMode);
+
+    /**
+     * Return the video stream mode.
+     *
+     * @return the video stream mode.
+     * @see VideoStreamMode
+     * @since 2.8.0
+     */
+    VideoStreamMode getVideoStreamMode();
+
+    /**
+     * Return the required service url, return null if unregistered.
+     * @param serviceUrlType the type of service url.
+     * @return the required service url, null if unregistered.
+     * @see ServiceUrlType
+     * @since 2.8.0
+     */
+    String getServiceUrl(ServiceUrlType serviceUrlType);
 }

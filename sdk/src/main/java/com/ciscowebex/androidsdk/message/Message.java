@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +23,13 @@
 package com.ciscowebex.androidsdk.message;
 
 import android.support.annotation.NonNull;
-import android.text.TextUtils;
+import android.support.annotation.Nullable;
 
 import com.ciscowebex.androidsdk.internal.Credentials;
 import com.ciscowebex.androidsdk.internal.model.ActivityModel;
 import com.ciscowebex.androidsdk.internal.model.ConversationModel;
 import com.ciscowebex.androidsdk.internal.model.MarkdownableModel;
+import com.ciscowebex.androidsdk.internal.model.MentionableModel;
 import com.ciscowebex.androidsdk.internal.model.ObjectModel;
 import com.ciscowebex.androidsdk.internal.model.ParentModel;
 import com.ciscowebex.androidsdk.internal.model.PersonModel;
@@ -40,14 +41,13 @@ import com.ciscowebex.androidsdk.utils.Utils;
 import com.ciscowebex.androidsdk.utils.WebexId;
 import com.google.gson.Gson;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Attributes;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.parser.Parser;
-
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import me.helloworld.utils.Checker;
 
 /**
  * This class represents a Message on Cisco Webex.
@@ -137,10 +137,7 @@ public class Message {
             return new Text(plain, html, markdown);
         }
 
-        private static final String MENTION_TAG = "spark-mention";
-        private static final String MENTION_OBJECT_TYPE = "data-object-type";
-        private static final String MENTION_PERSON_TYPE = "person";
-        private static final String MENTION_OBJECT_ID = "data-object-id";
+        private static final String REGEX = "data-object-type=\"([a-zA-Z]*)\"\\s+data-object-id=\"([0-9a-zA-Z-]+)\"";
 
         private String plain;
 
@@ -154,33 +151,33 @@ public class Message {
             this.markdown = markdown;
         }
 
-        private Text(@NonNull ObjectModel object, String clusterId) {
+        private Text(@NonNull ObjectModel object, @NonNull String clusterId) {
             this.plain = object.getDisplayName();
-            this.html = object.getContent();
-            this.html = convertPeopleId(this.html, clusterId);
+            this.html = reformatHtml(object.getContent(), clusterId);
             if (object instanceof MarkdownableModel) {
                 this.markdown = ((MarkdownableModel) object).getMarkdown();
             }
         }
 
-        private String convertPeopleId(String html, String clusterId) {
-            if (!TextUtils.isEmpty(html)) {
-                Document doc = Jsoup.parse(html, "", Parser.xmlParser());
-                for (Element e : doc.getElementsByTag(MENTION_TAG)) {
-                    Attributes attributes = e.attributes();
-                    String objectType = attributes.get(MENTION_OBJECT_TYPE);
-                    if (objectType != null && objectType.equalsIgnoreCase(MENTION_PERSON_TYPE)) {
-                        String uuid = attributes.get(MENTION_OBJECT_ID);
-                        if (!TextUtils.isEmpty(uuid)) {
-                            String base64Id = new WebexId(WebexId.Type.PEOPLE, clusterId, uuid).getBase64Id();
-                            if (!TextUtils.isEmpty(base64Id)) {
-                                attributes.put(MENTION_OBJECT_ID, base64Id);
+        private String reformatHtml(@Nullable String html, @NonNull String clusterId) {
+            if (!Checker.isEmpty(html)) {
+                Pattern pattern = Pattern.compile(REGEX, Pattern.CASE_INSENSITIVE);
+                Matcher matcher = pattern.matcher(html);
+                while (matcher.find()) {
+                    if (matcher.groupCount() == 2) {
+                        String typeString = matcher.group(1);
+                        String uuid = matcher.group(2);
+                        if (!Checker.isEmpty(typeString) && !Checker.isEmpty(uuid)) {
+                            WebexId.Type type = typeString.equalsIgnoreCase("person") ? WebexId.Type.PEOPLE : WebexId.Type.getEnum(typeString);
+                            if (type != null) {
+                                String base64Id = new WebexId(type, clusterId, uuid).getBase64Id();
+                                if (!Checker.isEmpty(base64Id)) {
+                                    html = html.replace(uuid, base64Id);
+                                }
                             }
                         }
                     }
                 }
-                doc.outputSettings().prettyPrint(false);
-                return doc.outerHtml();
             }
             return html;
         }
@@ -229,15 +226,19 @@ public class Message {
 
     protected boolean isAllMentioned;
 
+    protected transient List<Mention> mentions;
+
     protected Text textAsObject;
 
     protected transient List<RemoteFile> remoteFiles;
 
-    protected transient List<Mention.Person> mentionedPersons;
-
     protected ParentModel parent;
 
     protected String clusterId;
+
+    protected Date created;
+
+    protected Date updated;
 
     protected Message(ActivityModel activity, Credentials user, String clusterId, boolean received) {
         this.activity = activity;
@@ -275,12 +276,14 @@ public class Message {
             if (this.toPersonEmail == null && received && user.getPerson() != null) {
                 this.toPersonEmail = Utils.getFirst(user.getPerson().getEmails());
             }
-            this.isSelfMentioned = activity.isSelfMention(user, 0);
+            this.isSelfMentioned = activity.isSelfMentioned(user, 0);
         }
-        this.isAllMentioned = activity.isAllMention(0);
+        this.isAllMentioned = activity.isAllMentioned(0);
+        this.mentions = getMentions(activity.getObject());
         this.remoteFiles = RemoteFileImpl.mapRemoteFiles(activity);
-        this.mentionedPersons = activity.getMentionedPersons();
         this.parent = activity.getParent();
+        this.created = activity.getPublished();
+        this.updated = created;
     }
 
     /**
@@ -395,7 +398,17 @@ public class Message {
      * @since 0.1
      */
     public Date getCreated() {
-        return activity.getPublished();
+        return created;
+    }
+
+    /**
+     * Returns the {@link java.util.Date} that the message being updated, the date will equals created time, if has NOT updated.
+     *
+     * @return The {@link java.util.Date} that the message being updated, the date will equals created time, if has NOT updated.
+     * @since 2.8
+     */
+    public Date getUpdated() {
+        return updated;
     }
 
     /**
@@ -408,13 +421,22 @@ public class Message {
     }
 
     /**
-     * Returns true if the message mentioned all people in space.
+     * Returns true if the message mentioned everyone in space.
      *
-     * @return True if the message mentioned all people in space.
      * @since 2.6.0
      */
     public boolean isAllMentioned() {
         return this.isAllMentioned;
+    }
+
+    /**
+     * Returns all people mentioned in the message
+     *
+     * @return The mentions.
+     * @since 2.6.0
+     */
+    public List<Mention> getMentions() {
+        return mentions;
     }
 
     /**
@@ -459,15 +481,6 @@ public class Message {
     }
 
     /**
-     * Returns the mentioned person id list. Empty list means no person mentioned or ALL people mentioned.
-     * Use this method with {@link Message#isAllMentioned()}
-     * @return The mentioned person id list.
-     */
-    public List<Mention.Person> getMentionedPersons() {
-        return mentionedPersons;
-    }
-
-    /**
      * Returns the message in JSON string format.
      *
      * @return the message in JSON string format.
@@ -478,4 +491,38 @@ public class Message {
         return gson.toJson(this);
     }
 
+    private List<Mention> getMentions(ObjectModel object) {
+        List<Mention> ret = new ArrayList<>();
+        if (object instanceof MentionableModel) {
+            MentionableModel mentionable = (MentionableModel) object;
+            if (mentionable.getMentions() != null && mentionable.getMentions().size() > 0) {
+                for (PersonModel mention : mentionable.getMentions().getItems()) {
+                    if (mention.getId() != null) {
+                        ret.add(new Mention.Person(new WebexId(WebexId.Type.PEOPLE, WebexId.DEFAULT_CLUSTER_ID, mention.getId()).getBase64Id()));
+                    }
+                }
+            }
+            if (mentionable.getGroupMentions() != null && mentionable.getGroupMentions().size() > 0) {
+                ret.add(new Mention.All());
+            }
+        }
+        return ret;
+    }
+
+    public void update(MessageObserver.MessageEdited event) {
+        ActivityModel activity = event.getActivity();
+        if (activity == null) {
+            return;
+        }
+        Credentials user = event.getUser();
+        if (user != null) {
+            this.isSelfMentioned = activity.isSelfMentioned(user, 0);
+        }
+        if (activity.getObject() != null) {
+            this.textAsObject = new Text(activity.getObject(), clusterId);
+        }
+        this.isAllMentioned = activity.isAllMentioned(0);
+        this.mentions = getMentions(activity.getObject());
+        this.updated = activity.getPublished();
+    }
 }
