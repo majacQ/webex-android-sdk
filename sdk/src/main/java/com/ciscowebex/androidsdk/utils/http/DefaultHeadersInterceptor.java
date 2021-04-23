@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,25 +24,29 @@ package com.ciscowebex.androidsdk.utils.http;
 
 import java.io.IOException;
 
+import com.ciscowebex.androidsdk.internal.ServiceReqeust;
 import com.ciscowebex.androidsdk.utils.TrackingIdGenerator;
-import com.ciscowebex.androidsdk.utils.Utils;
+import com.ciscowebex.androidsdk.utils.UserAgent;
 
 import okhttp3.Interceptor;
 import okhttp3.Response;
 
 public class DefaultHeadersInterceptor implements Interceptor {
 
-    protected String userAgent = Utils.versionInfo();
-    protected TrackingIdGenerator trackingIdGenerator = new TrackingIdGenerator();
-
     @Override
     public Response intercept(Chain chain) throws IOException {
-        okhttp3.Request.Builder requestBuilder = chain.request().newBuilder()
-                .addHeader("Accept", "application/json")
-                .header("User-Agent", userAgent)
-                .header("Spark-User-Agent", userAgent)
+        okhttp3.Request.Builder requestBuilder = chain.request().newBuilder();
+        requestBuilder.addHeader("Accept", "application/json")
+                .header("User-Agent", UserAgent.value)
+                .header("Spark-User-Agent", UserAgent.value)
                 .header("Content-Type", "application/json; charset=utf-8")
-                .header("TrackingID", trackingIdGenerator.nextTrackingId());
+                .header(ServiceReqeust.HEADER_TRACKING_ID, TrackingIdGenerator.shared.nextTrackingId());
+        String url = chain.request().url().toString();
+        if (!url.contains("wbx2.com") && !url.contains("ciscospark.com") && !url.contains("webex.com")) {
+            requestBuilder.removeHeader("Spark-User-Agent");
+            requestBuilder.removeHeader("Cisco-Request-ID");
+            requestBuilder.removeHeader(ServiceReqeust.HEADER_TRACKING_ID);
+        }
         return chain.proceed(requestBuilder.build());
     }
 }

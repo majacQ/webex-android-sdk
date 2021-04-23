@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,28 +30,28 @@ import java.util.UUID;
 
 public class TrackingIdGenerator {
 
+    public static final TrackingIdGenerator shared = new TrackingIdGenerator();
+
     private final String base;
     private int counter;
     private String currentTrackingId;
 
-    public TrackingIdGenerator() {
+    private TrackingIdGenerator() {
         base = UUID.randomUUID().toString();
         currentTrackingId = "";
     }
 
     public synchronized String nextTrackingId() {
-        String trackingId;
+        String trackingId = String.format(Locale.US, "%s_%s_%d", "webex-android-sdk", base, counter);
         if (BuildConfig.INTEGRATION_TEST) {
-            trackingId = String.format(Locale.US, "ITCLIENT_%s_%d", base, counter);
-        } else {
-            trackingId = String.format(Locale.US, "CLIENT_%s_%d", base, counter);
+            trackingId = "IT" + trackingId;
         }
         counter++;
         if (counter > 65536) {
             counter = 0;
         }
         currentTrackingId = trackingId;
-        Ln.report(null, "Tracking-Id: " + currentTrackingId);
+        Ln.report(null, "TrackingId: " + currentTrackingId);
         return trackingId;
     }
 

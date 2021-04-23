@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ import com.google.gson.Gson;
 /**
  * A data type presents a Webhook at Cisco Webex for Developer.
  *
- * @see <a href="https://developer.webex.com/webhooks-explained.html">Webhook Explained</a>
+ * @see <a href="https://developer.webex.com/docs/api/guides/webhooks">Webhooks Guide</a>
  * @since 0.1
  */
 public class Webhook {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -124,7 +124,7 @@ public class JWTAuthenticator implements Authenticator {
             ResultImpl.errorInMain(handler, WebexError.from("JWT is null"));
             return;
         }
-        Service.Hydra.post().to("jwt/login").header("Authorization", jwt).header("Cache-Control", "no-cache")
+        Service.Hydra.global().post().to("jwt/login").header("Authorization", jwt).header("Cache-Control", "no-cache")
                 .queue(Queue.main).model(JWTLoginModel.class).error(handler)
                 .async((Closure<JWTLoginModel>) model -> {
             tokenModel = model.toToken(jwt);

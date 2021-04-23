@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ import com.ciscowebex.androidsdk.CompletionHandler;
 import com.ciscowebex.androidsdk.auth.Authenticator;
 import com.ciscowebex.androidsdk.internal.Device;
 import com.ciscowebex.androidsdk.internal.ResultImpl;
-import com.ciscowebex.androidsdk.internal.Service;
+import com.ciscowebex.androidsdk.internal.ServiceReqeust;
 
 public class UnregisterOperation implements Runnable {
 
@@ -46,7 +46,7 @@ public class UnregisterOperation implements Runnable {
     public void run() {
         String deviceUrl = device.getDeviceUrl();
         if (deviceUrl != null) {
-            Service.Wdm.delete().url(deviceUrl).auth(authenticator).error(callback).async(data -> callback.onComplete(ResultImpl.success(null)));
+            ServiceReqeust.make(deviceUrl).delete().auth(authenticator).error(callback).async(data -> callback.onComplete(ResultImpl.success(null)));
         }
     }
 }

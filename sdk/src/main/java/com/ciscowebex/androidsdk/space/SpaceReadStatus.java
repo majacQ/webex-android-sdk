@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,8 +50,8 @@ public class SpaceReadStatus {
     @SerializedName("lastSeenActivityDate")
     private Date _lastSeenActivityDate;
 
-    protected SpaceReadStatus(ConversationModel conversation) {
-        _id =  new WebexId(WebexId.Type.ROOM_ID, conversation.getId()).toHydraId();
+    protected SpaceReadStatus(ConversationModel conversation, String clusterId) {
+        _id =  new WebexId(WebexId.Type.ROOM, clusterId, conversation.getId()).getBase64Id();
         _type = conversation.isOneOnOne() ? Space.SpaceType.DIRECT : Space.SpaceType.GROUP;
         _lastSeenActivityDate = conversation.getLastSeenActivityDate();
         _lastActivityDate = conversation.getLastReadableActivityDate();

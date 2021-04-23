@@ -1,3 +1,25 @@
+/*
+ * Copyright 2016-2021 Cisco Systems Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package com.ciscowebex.androidsdk.internal.crypto;
 
 import com.nimbusds.jose.*;
@@ -5,14 +27,15 @@ import com.nimbusds.jose.crypto.DirectDecrypter;
 import com.nimbusds.jose.crypto.DirectEncrypter;
 import com.nimbusds.jose.util.Base64URL;
 import net.minidev.json.JSONObject;
+
+import org.bouncycastle.crypto.InvalidCipherTextException;
+import org.bouncycastle.crypto.engines.AESLightEngine;
+import org.bouncycastle.crypto.io.InvalidCipherTextIOException;
+import org.bouncycastle.crypto.modes.AEADBlockCipher;
+import org.bouncycastle.crypto.modes.GCMBlockCipher;
+import org.bouncycastle.crypto.params.AEADParameters;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.jetbrains.annotations.NotNull;
-import org.spongycastle.crypto.InvalidCipherTextException;
-import org.spongycastle.crypto.engines.AESFastEngine;
-import org.spongycastle.crypto.io.InvalidCipherTextIOException;
-import org.spongycastle.crypto.modes.AEADBlockCipher;
-import org.spongycastle.crypto.modes.GCMBlockCipher;
-import org.spongycastle.crypto.params.AEADParameters;
-import org.spongycastle.crypto.params.KeyParameter;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -191,7 +214,7 @@ public class SecureContentReference {
         KeyParameter k = new KeyParameter(getKey());
         byte[] aad = getAAD().getBytes(StandardCharsets.UTF_8);
         AEADParameters params = new AEADParameters(k, 128, getIV(), aad);
-        GCMBlockCipher c = new GCMBlockCipher(new AESFastEngine());
+        GCMBlockCipher c = new GCMBlockCipher(new AESLightEngine());
         c.init(encrypting, params);
         return c;
     }

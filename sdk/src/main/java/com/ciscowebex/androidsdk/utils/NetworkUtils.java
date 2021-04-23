@@ -1,13 +1,39 @@
+/*
+ * Copyright 2016-2021 Cisco Systems Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package com.ciscowebex.androidsdk.utils;
 
 import android.support.annotation.Nullable;
+import com.ciscowebex.androidsdk.internal.ErrorDetail;
+import com.ciscowebex.androidsdk.internal.Service;
+import com.ciscowebex.androidsdk.internal.ServiceReqeust;
 import com.github.benoitdion.ln.Ln;
-import okhttp3.Headers;
+import com.google.gson.JsonSyntaxException;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.*;
 import java.util.Enumeration;
 
 public class NetworkUtils {
@@ -30,6 +56,11 @@ public class NetworkUtils {
         return null;
     }
 
+    public static boolean isBehindProxy() {
+        return ProxySelector.getDefault().select(URI.create(Service.Wdm.baseUrl(null) + "/ping")).get(0) != Proxy.NO_PROXY;
+    }
+
+
     public static String resolveHostName(String hostName) {
         InetAddress serverAddr;
         try {
@@ -46,11 +77,7 @@ public class NetworkUtils {
         if (response == null) {
             return null;
         }
-        Headers headers = response.headers();
-        if (headers == null) {
-            return null;
-        }
-        return response.headers().get("trackingid");
+        return response.headers().get(ServiceReqeust.HEADER_TRACKING_ID);
     }
 
     /**
@@ -88,5 +115,28 @@ public class NetworkUtils {
         }
 
         return Math.min(Math.max(retrySeconds, minimum), maximum);
+    }
+
+    public static @Nullable ErrorDetail parseErrorDetailFromResponse(@Nullable okhttp3.Response response) {
+        try {
+            if (response != null && !isResponseSuccessful(response)) {
+                ResponseBody body = response.body();
+                String data = body == null ? null : body.string();
+                return data == null ? null : Json.fromJson(data, ErrorDetail.class);
+            }
+        } catch (JsonSyntaxException e) {
+            Ln.w(e, "Syntax exception while attempting to parsing the errorBody of a response");
+        } catch (EOFException e) {
+            if (response.code() != HttpURLConnection.HTTP_NOT_MODIFIED) {
+                Ln.w(e, "This exception may be due to the error body being parsed twice from the same object");
+            }
+        } catch (IOException e) {
+            Ln.e(e, "Error while attempting to parsing the errorBody of a response");
+        }
+        return null;
+    }
+
+    public static boolean isResponseSuccessful(@Nullable okhttp3.Response response) {
+        return response != null && response.code() < 400;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,11 +37,12 @@ public class UIEventHandler {
         void onMediaPermission(boolean permission);
 
         void onScreenCapturePermission(Intent permission);
+
     }
 
     static class UIEventBroadcastReceiver extends BroadcastReceiver {
 
-        private int rotation;
+        private int rotation = -1;
 
         private EventObserver observer;
 

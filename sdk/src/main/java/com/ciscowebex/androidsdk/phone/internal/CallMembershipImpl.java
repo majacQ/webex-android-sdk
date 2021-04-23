@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,20 @@
 
 package com.ciscowebex.androidsdk.phone.internal;
 
-import com.ciscowebex.androidsdk.internal.model.*;
+import com.ciscowebex.androidsdk.internal.model.FloorModel;
+import com.ciscowebex.androidsdk.internal.model.LocusMediaDirection;
+import com.ciscowebex.androidsdk.internal.model.LocusModel;
+import com.ciscowebex.androidsdk.internal.model.LocusParticipantModel;
 import com.ciscowebex.androidsdk.phone.CallMembership;
 import com.ciscowebex.androidsdk.utils.WebexId;
 import com.github.benoitdion.ln.Ln;
 
-import me.helloworld.utils.Checker;
-import me.helloworld.utils.Objects;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+
+import me.helloworld.utils.Checker;
 
 public class CallMembershipImpl implements CallMembership {
 
@@ -66,7 +70,7 @@ public class CallMembershipImpl implements CallMembership {
     CallMembershipImpl(LocusParticipantModel participant, CallImpl call) {
         this.call = call;
         setModel(participant);
-        Ln.d("CallMembership: " + getId() + " person: " + getPersonId() + " email: " + getEmail() + "  video: " +  isSendingVideo() + "   audio: " + isSendingAudio());
+        Ln.d("CallMembership: " + getId() + " person: " + getPersonId() + " displayName: " + getDisplayName() + "  video: " + isSendingVideo() + "   audio: " + isSendingAudio());
     }
 
     public String getId() {
@@ -91,6 +95,11 @@ public class CallMembershipImpl implements CallMembership {
 
     public String getEmail() {
         return model.getPerson() == null ? null : model.getPerson().getEmail();
+    }
+
+    @Override
+    public String getDisplayName() {
+        return model.getPerson() == null ? null : model.getPerson().getDisplayName();
     }
 
     public String getSipUrl() {
@@ -121,6 +130,24 @@ public class CallMembershipImpl implements CallMembership {
         return Checker.isEqual(getId(), ((CallMembershipImpl) call.getActiveSpeaker()).getId());
     }
 
+    @Override
+    public boolean isAudioMutedControlled() {
+        return model.isAudioRemotelyMuted();
+    }
+
+    @Override
+    @Nullable
+    public String audioModifiedBy() {
+        String personId = null;
+        if (model.getControls() != null && model.getControls().getAudio() != null && model.getControls().getAudio().getMeta() != null) {
+            personId = model.getControls().getAudio().getMeta().getModifiedBy();
+        }
+        if (personId != null) {
+            personId = new WebexId(WebexId.Type.PEOPLE, WebexId.DEFAULT_CLUSTER, personId).getBase64Id();
+        }
+        return personId;
+    }
+
     public LocusParticipantModel getModel() {
         synchronized (this) {
             return model;
@@ -131,7 +158,7 @@ public class CallMembershipImpl implements CallMembership {
         synchronized (this) {
             this.model = model;
             this.self = Checker.isEqual(model.getId(), call.getModel().getSelfId());
-            this.personId = new WebexId(WebexId.Type.PEOPLE_ID, model.getPerson().getId()).toHydraId();
+            this.personId = new WebexId(WebexId.Type.PEOPLE, WebexId.DEFAULT_CLUSTER, model.getPerson().getId()).getBase64Id();
             this.initiator = model.isCreator();
         }
     }
@@ -149,8 +176,8 @@ public class CallMembershipImpl implements CallMembership {
                 + " status: " + getState()
                 + " isSelf: " + isSelf()
                 + " person: " + getPersonId()
-                + " email: " + getEmail()
-                + " video: " +  isSendingVideo()
+                + " displayName: " + getDisplayName()
+                + " video: " + isSendingVideo()
                 + " audio: " + isSendingAudio();
     }
 

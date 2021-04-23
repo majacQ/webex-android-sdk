@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
 import com.ciscowebex.androidsdk.WebexError;
 import com.ciscowebex.androidsdk.auth.Authenticator;
 import com.ciscowebex.androidsdk.internal.Closure;
+import com.ciscowebex.androidsdk.internal.ServiceReqeust;
 import com.ciscowebex.androidsdk.internal.queue.BackgroundQueue;
 import com.ciscowebex.androidsdk.internal.queue.Queue;
 import com.ciscowebex.androidsdk.utils.Json;
@@ -36,6 +38,7 @@ import com.ciscowebex.androidsdk.utils.Utils;
 import com.ciscowebex.androidsdk.utils.http.HttpClient;
 import com.github.benoitdion.ln.Ln;
 import com.google.gson.*;
+
 import me.helloworld.utils.Checker;
 import okhttp3.*;
 import okio.ByteString;
@@ -48,11 +51,13 @@ public class MercuryService {
 
     public interface MercuryListener {
         void onConnected(@Nullable WebexError error);
+
         void onDisconnected(@Nullable WebexError error);
+
         void onEvent(@NonNull MercuryEvent event);
     }
 
-    private static final int[] RETRY_DELAY = new int[] { 1, 4, 16, 60, 120 };
+    private static final int[] RETRY_DELAY = new int[]{1, 4, 16, 60, 120};
     private AtomicInteger failureCount = new AtomicInteger(0);
 
     private Queue queue = new BackgroundQueue();
@@ -62,8 +67,8 @@ public class MercuryService {
     private boolean connected = false;
 
     private Authenticator authenticator;
-    private OkHttpClient client = HttpClient.makeClient();
-    private MercuryWebsocketListener websocketListener =  new MercuryWebsocketListener();
+    private OkHttpClient client = HttpClient.newClient().build();
+    private MercuryWebsocketListener websocketListener = new MercuryWebsocketListener();
     private MercuryListener mercuryListener;
     private Closure<WebexError> onConnected;
 
@@ -71,14 +76,17 @@ public class MercuryService {
     private Runnable reconnectWork = () -> queue.run(new Runnable() {
         @Override
         public void run() {
-            Ln.d("Mercury try to re-connect.");
+            Ln.d("Mercury try to reconnect.");
             if (url != null && !connected) {
-                authenticator.getToken( token -> {
+                authenticator.getToken(token -> {
                     Ln.d("Websocket reconnecting: " + url);
                     Request request = new Request.Builder().url(url).header("Authorization", "Bearer " + token.getData()).build();
                     client.dispatcher().cancelAll();
                     websocket = client.newWebSocket(request, websocketListener);
                 });
+            }
+            else {
+                Ln.d("Mercury should not reconnect: " + url + ", connected: " + connected);
             }
         }
     });
@@ -97,7 +105,7 @@ public class MercuryService {
             }
             websocket = null;
             this.url = url;
-            authenticator.getToken (token -> {
+            authenticator.getToken(token -> {
                 Ln.d("Websocket connecting: " + url);
                 Request request = new Request.Builder().url(url).header("Authorization", "Bearer " + token.getData()).build();
                 client.dispatcher().cancelAll();
@@ -141,16 +149,14 @@ public class MercuryService {
                     mercuryListener.onConnected(e);
                 }
                 onConnected = null;
-            }
-            else if (error != null) {
+            } else if (error != null) {
                 Ln.d("Websocket is disconnected: " + error);
                 if (websocket == null || error.getErrorCode() == WebSocketStatusCodes.CLOSE_NORMAL.getCode()) {
                     Ln.d("Websocket is disconnected on purpose");
                     if (mercuryListener != null) {
                         mercuryListener.onDisconnected(null);
                     }
-                }
-                else {
+                } else {
                     int failureCount = this.failureCount.getAndAdd(1);
                     int retryIndex = failureCount < RETRY_DELAY.length ? failureCount : RETRY_DELAY.length - 1;
                     int delay = RETRY_DELAY[retryIndex] + new Random().nextInt(10);
@@ -172,7 +178,7 @@ public class MercuryService {
 
         @Override
         public void onOpen(WebSocket webSocket, Response response) {
-            trackingId = response.header("TrackingID");
+            trackingId = response.header(ServiceReqeust.HEADER_TRACKING_ID);
             Ln.i("Mercury connection opened. handshake: %s - %s TrackingId: %s", response.code(), response.message(), trackingId);
             queue.run(() -> {
                 connected = true;
@@ -196,7 +202,7 @@ public class MercuryService {
         public void onClosed(WebSocket webSocket, int rawCode, String reason) {
             WebSocketStatusCodes code = WebSocketStatusCodes.valueForCode(rawCode);
             Ln.i("Connection closed. Reason: \"%s\", code: %d (%s), TrackingId: %s", reason, rawCode, code.name(), trackingId);
-            onMercuryDisconnected(new WebexError(rawCode, reason));
+            onMercuryDisconnected(new WebexError(WebexError.ErrorCode.WEBSOCKET_ERROR, rawCode + "/" + reason));
         }
 
         @Override
@@ -306,6 +312,7 @@ public class MercuryService {
             this.type = "ack";
             this.messageId = messageId;
         }
+
         public String toString() {
             return String.format(Locale.US, "{ \"type\": \"%s\", \"messageId\": \"%s\" }", type, messageId);
         }

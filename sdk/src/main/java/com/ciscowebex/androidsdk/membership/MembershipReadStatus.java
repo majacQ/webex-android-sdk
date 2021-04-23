@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,14 +42,14 @@ public class MembershipReadStatus {
 
     private Date _lastSeenDate;
 
-    protected MembershipReadStatus(ConversationModel conversation, PersonModel person) throws IllegalArgumentException {
+    protected MembershipReadStatus(ConversationModel conversation, PersonModel person, String clusterId) throws IllegalArgumentException {
         PersonModel.RoomPropertiesModel roomProperties = person.getRoomProperties();
         if (roomProperties == null) {
             throw new IllegalArgumentException("RoomProperties is null");
         }
-        _lastSeenId = new WebexId(WebexId.Type.MESSAGE_ID, roomProperties.getLastSeenActivityUUID()).toHydraId();
+        _lastSeenId = new WebexId(WebexId.Type.MESSAGE, clusterId, roomProperties.getLastSeenActivityUUID()).getBase64Id();
         _lastSeenDate = roomProperties.getLastSeenActivityDate();
-        _membership = new Membership(conversation, person);
+        _membership = new Membership(conversation, person, clusterId);
     }
 
     /**

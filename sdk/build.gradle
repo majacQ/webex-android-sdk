@@ -9,10 +9,10 @@ ext {
     moduleName = 'Cisco Webex Android SDK'
     moduleGroupId = 'com.ciscowebex'
     moduleArtifactId = 'androidsdk'
-    moduleVersion = '2.5.0.3-SNAPSHOT'
-    moduleVersionCode = 25003
+    moduleVersion = '2.7.0.8-SNAPSHOT'
+    moduleVersionCode = 27013
     moduleDescription = 'Cisco Webex SDK for Android'
-    moduleSiteUrl = 'https://developer.webex.com/getting-started.html'
+    moduleSiteUrl = 'https://developer.webex.com/docs/sdks/android'
     moduleProjectUrl = 'https://github.com/webex/webex-android-sdk'
     moduleGitUrl = 'https://github.com/webex/webex-android-sdk/tree/master'
     moduleConnectionUrl = 'scm:git:git://github.com/webex/webex-android-sdk.git'
@@ -24,6 +24,8 @@ ext {
     moduleDeveloperEmail = 'devsupport@ciscowebex.com'
     moduleDeveloperOrganization = 'Cisco System Inc'
     moduleDeveloperOrganizationURL = 'https://www.webex.com/'
+
+    moduleWMEVersion = '10.12.2.0'
 }
 
 Properties properties = new Properties()
@@ -39,7 +41,6 @@ android {
     buildToolsVersion "28.0.3"
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 27
         testInstrumentationRunner "com.ciscowebex.androidsdk.WebexTestRunner"
         multiDexEnabled true
         versionCode moduleVersionCode
@@ -180,12 +181,47 @@ publishing {
                 }
             }
         }
+
+        WME(MavenPublication) {
+            groupId "com.webex"
+            artifactId "wme4android-release"
+            version moduleWMEVersion
+            artifact rootDir.absolutePath + '/deps/wme4android-release-' + moduleWMEVersion + '.aar'
+            pom.withXml {
+                asNode().appendNode('description', 'Cisco Webex Media Engine')
+                asNode().appendNode('name', 'Cisco Webex Media Engine')
+                asNode().children().last() + {
+                    resolveStrategy = DELEGATE_FIRST
+                    url moduleSiteUrl
+                    scm {
+                        url moduleGitUrl
+                        connection moduleConnectionUrl
+                        developerConnection moduleDeveloperConnectionUrl
+                    }
+                    licenses {
+                        license {
+                            name 'Commercial'
+                            url 'https://www.cisco.com/c/en/us/products/end-user-license-agreement.html'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id moduleDeveloperId
+                            name moduleDeveloperName
+                            email moduleDeveloperEmail
+                            organization moduleDeveloperOrganization
+                            organizationUrl 'https://www.webex.com/products/teams/'
+                        }
+                    }
+                }
+            }
+        }
     }
 
     repositories {
         maven {
             name 'DevSnapshot'
-            url "http://engci-maven.cisco.com/artifactory/webexsdk-SNAPSHOT/"
+            url "https://engci-maven.cisco.com/artifactory/webexsdk-SNAPSHOT/"
             credentials {
                 username repo_username
                 password repo_password
@@ -194,7 +230,7 @@ publishing {
 
         maven {
             name 'Release'
-            url "http://engci-maven.cisco.com/artifactory/webexsdk/"
+            url "https://engci-maven.cisco.com/artifactory/webexsdk/"
             credentials {
                 username repo_username
                 password repo_password
@@ -204,19 +240,18 @@ publishing {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation('com.webex:wme4android-release:10.3.1.1@aar')
-    implementation('com.google.code.gson:gson:2.7')
-    implementation('com.github.benoitdion.ln:ln:0.1.2')
-    implementation('com.squareup.okhttp3:okhttp:3.12.0')
-    implementation('com.squareup.okhttp3:logging-interceptor:3.12.0')
-    implementation('com.android.support:support-annotations:27.1.0')
-    implementation('com.android.support:support-compat:27.1.0')
-    implementation('com.nimbusds:nimbus-jose-jwt:2.26')
-    implementation('com.madgag.spongycastle:core:1.54.0.0')
-    implementation('com.madgag.spongycastle:prov:1.54.0.0')
-    implementation('joda-time:joda-time:2.10')
-
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "com.webex:wme4android-release:$moduleWMEVersion@aar"
+    implementation 'com.google.code.gson:gson:2.7'
+    implementation 'com.github.benoitdion.ln:ln:0.1.2'
+    implementation 'com.squareup.okhttp3:okhttp:3.12.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.12.0'
+    implementation 'com.android.support:support-annotations:27.1.0'
+    implementation 'com.android.support:support-compat:27.1.0'
+    implementation 'com.nimbusds:nimbus-jose-jwt:8.17.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.11.0'
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.65'
+    implementation 'joda-time:joda-time:2.10'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support:support-annotations:27.1.0'
     androidTestImplementation 'com.android.support.test:runner:1.0.0'
@@ -269,7 +304,7 @@ task javadoc(type: Javadoc) {
     options.docTitle(moduleName + ' ' + moduleVersion)
     options.links("http://docs.oracle.com/javase/7/docs/api/");
     options.links("http://d.android.com/reference/");
-    options.footer('Copyright &#169; 2016&#8211;2020 Cisco System Inc.  All Rights Reserved.')
+    options.footer('Copyright &#169; 2016&#8211;2021 Cisco System Inc.  All Rights Reserved.')
     exclude '**/BuildConfig.java'
     exclude '**/R.java'
     exclude '**/internal/**'

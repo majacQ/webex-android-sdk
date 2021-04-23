@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ import android.support.annotation.NonNull;
 import com.ciscowebex.androidsdk.CompletionHandler;
 
 /**
- * An client wrapper of the Cisco Webex <a href="https://developer.webex.com/resource-teams.html">Teams REST API</a>
+ * An client wrapper of the Cisco Webex <a href="https://developer.webex.com/docs/api/v1/teams">Teams REST API</a>
  *
  * @since 0.1
  */

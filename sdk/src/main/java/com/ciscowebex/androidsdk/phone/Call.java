@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,13 @@
 package com.ciscowebex.androidsdk.phone;
 
 import java.util.List;
+import java.util.Set;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import android.util.Size;
+
 import com.ciscowebex.androidsdk.CompletionHandler;
 
 import android.view.View;
@@ -110,7 +112,7 @@ public interface Call {
      *
      * @since 2.4.0
      */
-    enum WaitReason{
+    enum WaitReason {
         /**
          * Waiting in the lobby for the meeting to start.
          */
@@ -127,9 +129,9 @@ public interface Call {
      * @since 2.6.0
      */
     enum VideoRenderMode {
+
         /**
          * The option to scale the video to fit the size of the view by maintaining the aspect ratio.
-         *
          * The black paddings will be added to the remaining area of the view.
          */
         Fit,
@@ -141,6 +143,30 @@ public interface Call {
          * The option to scale the video to fit the size of the view by changing the aspect ratio of the video if necessary.
          */
         StretchFill
+    }
+
+    /**
+     * The options to switch audio output during a call.
+     *
+     * @since 2.7.0
+     */
+    enum AudioOutputMode {
+        /**
+         * The option to play audio through phone.
+         */
+        PHONE,
+        /**
+         * The option to play audio through headset(if connected).
+         */
+        HEADSET,
+        /**
+         * The option to play audio through speaker.
+         */
+        SPEAKER,
+        /**
+         * The option to play audio through bluetooth headset(if connected).
+         */
+        BLUETOOTH_HEADSET
     }
 
     /**
@@ -180,6 +206,13 @@ public interface Call {
     CallObserver getObserver();
 
     /**
+     * Return the associated space of this call
+     *
+     * @since 2.6.0
+     */
+    String getSpaceId();
+
+    /**
      * @return Call Memberships represent participants in this call.
      * @since 0.1
      */
@@ -198,10 +231,46 @@ public interface Call {
     CallMembership getTo();
 
     /**
+     * Returns the schedules of this call if this call has one or more schedules.
+     * If the call isn't a scheduled call, the method will returns null.
+     *
+     * @since 2.6.0
+     */
+    Set<CallSchedule> getSchedules();
+
+    /**
      * Specify how the remote video adjusts its content to be render in a view.
+     *
+     * @param mode the remote video render mode
      * @since 2.6.0
      */
     void setRemoteVideoRenderMode(VideoRenderMode mode);
+
+    /**
+     * Specify the video layout for the active speaker and other attendees in the group video meeting.
+     *
+     * @param layout the video layout mode
+     * @since 2.6.0
+     * @deprecated please use {@link Call#setCompositedVideoLayout(MediaOption.CompositedVideoLayout)}
+     */
+    void setVideoLayout(MediaOption.CompositedVideoLayout layout);
+
+    /**
+     * Specify the composited video layout for the active speaker and other attendees in the group video meeting.
+     *
+     * @param layout the composited video layout mode
+     * @since 2.8.0
+     */
+    void setCompositedVideoLayout(MediaOption.CompositedVideoLayout layout);
+
+    /**
+     * Specify the composited video layout for the active speaker and other attendees in the group video meeting.
+     *
+     * @param layout   the composited video layout mode
+     * @param callback A closure to be executed when completed, with error if the invocation is illegal or failed, otherwise nil.
+     * @since 2.8.0
+     */
+    void setCompositedVideoLayout(MediaOption.CompositedVideoLayout layout, @Nullable CompletionHandler<Void> callback);
 
     /**
      * @return The local video render view dimensions (points) of this call.
@@ -387,12 +456,14 @@ public interface Call {
 
     /**
      * Start content sharing.
+     *
      * @since 1.4
      */
     void startSharing(@NonNull CompletionHandler<Void> callback);
 
     /**
      * Stop content sharing.
+     *
      * @since 1.4
      */
     void stopSharing(@NonNull CompletionHandler<Void> callback);
@@ -485,5 +556,13 @@ public interface Call {
      * @since 2.4.0
      */
     void letIn(@NonNull List<CallMembership> memberships);
+
+    /**
+     * Switch the audio play output mode during a call.
+     *
+     * @param audioOutputMode the audio play output mode during a call.
+     * @since 2.7.0
+     */
+    void switchAudioOutput(AudioOutputMode audioOutputMode);
 
 }

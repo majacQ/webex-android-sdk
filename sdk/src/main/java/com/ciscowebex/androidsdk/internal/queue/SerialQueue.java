@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,7 +69,7 @@ public class SerialQueue implements Queue {
             pauseLock.lock();
             try {
                 while (isPaused) unpaused.await();
-            } catch(InterruptedException ie) {
+            } catch (InterruptedException ie) {
                 t.interrupt();
             } finally {
                 pauseLock.unlock();
@@ -108,16 +108,15 @@ public class SerialQueue implements Queue {
         this.picker = new PausableThreadPoolExecutor(id);
         if (type == Mode.MAIN) {
             queue = new MainQueue();
-        }
-        else {
+        } else {
             queue = new BackgroundQueue("Serial-" + id, true);
         }
     }
 
     public void run(Runnable task) {
-        Ln.d("SerialQueue pasue: %s, size: %s, task: %s", picker.isPaused, picker.getQueue().size(), task);
+        Ln.d("SerialQueue pause: %s, size: %s, task: %s", picker.isPaused, picker.getQueue().size(), task);
         picker.execute(() -> {
-            Ln.d("SerialQueue execute task: %s, pasue: %s, size: %s", task, picker.isPaused, picker.getQueue().size());
+            Ln.d("SerialQueue execute task: %s, pause: %s, size: %s", task, picker.isPaused, picker.getQueue().size());
             picker.pause();
             queue.run(task);
         });

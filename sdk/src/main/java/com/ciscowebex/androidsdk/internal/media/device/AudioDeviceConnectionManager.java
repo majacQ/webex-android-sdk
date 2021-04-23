@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,9 @@ package com.ciscowebex.androidsdk.internal.media.device;
 import android.bluetooth.*;
 import android.content.Context;
 import android.media.AudioManager;
+
 import com.ciscowebex.androidsdk.internal.media.*;
+import com.ciscowebex.androidsdk.phone.Call;
 import com.github.benoitdion.ln.Ln;
 import com.webex.wme.MediaSessionAPI;
 
@@ -103,7 +105,7 @@ public class AudioDeviceConnectionManager {
             }
             int playbackStreamType = session == null ? AudioManager.STREAM_VOICE_CALL : session.getAudioPlaybackStreamType().getValue();
             Ln.i("requestAudioFocus playbackStreamType(%s)", playbackStreamType);
-            audioManager.requestAudioFocus(null, playbackStreamType, android.media.AudioManager.AUDIOFOCUS_GAIN);
+            audioManager.requestAudioFocus(null, playbackStreamType, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
         } catch (Throwable t) {
             Ln.e(t);
         }
@@ -132,8 +134,7 @@ public class AudioDeviceConnectionManager {
         if (session != null) {
             if (connected) {
                 session.headsetPluggedIn();
-            }
-            else {
+            } else {
                 session.headsetPluggedOut();
             }
         }
@@ -145,35 +146,24 @@ public class AudioDeviceConnectionManager {
     }
 
     private void doUpdate() {
-        if (audioManager.isWiredHeadsetOn()) {
-            status = ConnectionStatus.WIRED_HEADSET;
-        }
-        else if (audioManager.isBluetoothScoAvailableOffCall() && (isBTHeadsetConnected() || isBTA2dpConnected())) {
+        if (audioManager.isBluetoothScoAvailableOffCall() && (isBTHeadsetConnected() || isBTA2dpConnected())) {
             status = ConnectionStatus.BLUETOOTH;
-        }
-        else {
+        } else if (audioManager.isWiredHeadsetOn()) {
+            status = ConnectionStatus.WIRED_HEADSET;
+        } else {
             status = ConnectionStatus.NONE;
         }
         Ln.d("status: " + status + "; previousStatus: " + previousStatus + "; devicePreference: " + devicePreference);
         if (status != previousStatus) {
             previousStatus = status;
             if (status == ConnectionStatus.WIRED_HEADSET) {
-                Ln.d("playThroughWiredHeadset");
-                audioManager.stopBluetoothSco();
-                audioManager.setSpeakerphoneOn(false);
-                audioManager.setMode(isAudioEnhancement() ? android.media.AudioManager.MODE_IN_COMMUNICATION : android.media.AudioManager.MODE_NORMAL);
-            }
-            else if (status == ConnectionStatus.BLUETOOTH) {
-                Ln.d("playThroughBluetooth");
-                audioManager.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
-                audioManager.setSpeakerphoneOn(false);
-                audioManager.startBluetoothSco();
-            }
-            else {
+                playThroughPhoneOrHeadSet();
+            } else if (status == ConnectionStatus.BLUETOOTH) {
+                playThroughBluetooth();
+            } else {
                 if (devicePreference == DevicePref.EARPIECE) {
                     playThroughEarpiece();
-                }
-                else {
+                } else {
                     playThroughSpeakerPhone();
                 }
             }
@@ -182,25 +172,25 @@ public class AudioDeviceConnectionManager {
     }
 
     public void updateAudioVolume() {
-        int streamType;
-        if (audioManager.getMode() == AudioManager.MODE_IN_COMMUNICATION) {
-            if (audioManager.isBluetoothScoOn()) {
-                streamType = STREAM_BLUETOOTH_SCO;
-            } else {
-                streamType = AudioManager.STREAM_VOICE_CALL;
-            }
-        } else {
-            streamType = AudioManager.STREAM_MUSIC;
-        }
-
-        int currentVol = audioManager.getStreamVolume(streamType);
-        int maxVol = audioManager.getStreamMaxVolume(streamType);
-        int volSetting = (65535 * currentVol) / maxVol;
-        Ln.d("updateAudioVolume: streamType=%s; set volume to=%s(%s/%s)", streamType, volSetting, currentVol, maxVol);
-        WmeSession session = mediaEngine == null ? null : mediaEngine.getSession();
-        if (session != null) {
-            session.setAudioVolume(volSetting);
-        }
+//        int streamType;
+//        if (audioManager.getMode() == AudioManager.MODE_IN_COMMUNICATION || audioManager.getMode() == AudioManager.MODE_IN_CALL) {
+//            if (audioManager.isBluetoothScoOn()) {
+//                streamType = STREAM_BLUETOOTH_SCO;
+//            } else {
+//                streamType = AudioManager.STREAM_VOICE_CALL;
+//            }
+//        } else {
+//            streamType = AudioManager.STREAM_MUSIC;
+//        }
+//
+//        int currentVol = audioManager.getStreamVolume(streamType);
+//        int maxVol = audioManager.getStreamMaxVolume(streamType);
+//        int volSetting = (65535 * currentVol) / maxVol;
+//        Ln.d("updateAudioVolume: streamType=%s; set volume to=%s(%s/%s)", streamType, volSetting, currentVol, maxVol);
+//        WmeSession session = mediaEngine == null ? null : mediaEngine.getSession();
+//        if (session != null) {
+//            session.setAudioVolume(volSetting);
+//        }
     }
 
     private boolean isBTHeadsetConnected() {
@@ -232,8 +222,8 @@ public class AudioDeviceConnectionManager {
         Ln.d("playThroughSpeakerPhone");
         audioManager.stopBluetoothSco();
         audioManager.setSpeakerphoneOn(true);
-        int mode = isAudioEnhancement() ? android.media.AudioManager.MODE_IN_COMMUNICATION : android.media.AudioManager.MODE_NORMAL;
-        audioManager.setMode(mode);
+        //int mode = isAudioEnhancement() ? android.media.AudioManager.MODE_IN_COMMUNICATION : android.media.AudioManager.MODE_NORMAL;
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
     }
 
     private void playThroughEarpiece() {
@@ -243,5 +233,53 @@ public class AudioDeviceConnectionManager {
         audioManager.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
     }
 
+    private void playThroughBluetooth() {
+        Ln.d("playThroughBluetooth");
+        audioManager.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.setSpeakerphoneOn(false);
+        audioManager.startBluetoothSco();
+    }
 
+    private void playThroughPhoneOrHeadSet() {
+        Ln.d("playThroughWiredHeadset");
+        audioManager.stopBluetoothSco();
+        audioManager.setSpeakerphoneOn(false);
+        //int mode = isAudioEnhancement() ? android.media.AudioManager.MODE_IN_COMMUNICATION : android.media.AudioManager.MODE_NORMAL;
+        audioManager.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+    }
+
+    private void playThroughNone() {
+        Ln.d("playThroughNone");
+        audioManager.stopBluetoothSco();
+        audioManager.setSpeakerphoneOn(false);
+    }
+
+    public void toggleAudioOutput(Call.AudioOutputMode mode) {
+        switch (mode) {
+            case PHONE:
+            case HEADSET:
+                if (audioManager.isWiredHeadsetOn()) {
+                    status = ConnectionStatus.WIRED_HEADSET;
+                } else {
+                    status = ConnectionStatus.NONE;
+                }
+                playThroughPhoneOrHeadSet();
+                break;
+            case SPEAKER:
+                status = ConnectionStatus.NONE;
+                playThroughSpeakerPhone();
+                break;
+            case BLUETOOTH_HEADSET:
+                if (audioManager.isBluetoothScoAvailableOffCall() && (isBTHeadsetConnected() || isBTA2dpConnected())) {
+                    status = ConnectionStatus.BLUETOOTH;
+                    playThroughBluetooth();
+                }
+                break;
+            default:
+                status = ConnectionStatus.NONE;
+                playThroughNone();
+                break;
+        }
+        previousStatus = status;
+    }
 }

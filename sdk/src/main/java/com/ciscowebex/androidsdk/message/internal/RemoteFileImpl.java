@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,26 @@
 package com.ciscowebex.androidsdk.message.internal;
 
 import android.support.annotation.NonNull;
-import com.ciscowebex.androidsdk.internal.model.FileModel;
-import com.ciscowebex.androidsdk.internal.model.ImageModel;
+import com.ciscowebex.androidsdk.internal.model.*;
 import com.ciscowebex.androidsdk.message.RemoteFile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RemoteFileImpl implements RemoteFile {
+
+    public static List<RemoteFile> mapRemoteFiles(ActivityModel activity) {
+        ArrayList<RemoteFile> remoteFiles = new ArrayList<>();
+        if (activity.getObject() != null && activity.getObject().isContent()) {
+            ContentModel content = (ContentModel) activity.getObject();
+            ItemsModel<FileModel> files = content.getContentFiles();
+            for (FileModel file : files.getItems()) {
+                RemoteFile remoteFile = new RemoteFileImpl(file);
+                remoteFiles.add(remoteFile);
+            }
+        }
+        return remoteFiles;
+    }
 
     public static class ThumbnailImpl implements Thumbnail{
 

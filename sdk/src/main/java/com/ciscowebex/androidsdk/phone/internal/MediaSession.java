@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,12 @@ import android.support.annotation.Nullable;
 import android.util.Pair;
 import android.util.Size;
 import android.view.View;
+
 import com.ciscowebex.androidsdk.internal.media.*;
 import com.ciscowebex.androidsdk.internal.media.WmeTrack;
+import com.ciscowebex.androidsdk.internal.media.device.MediaDeviceMananger;
 import com.ciscowebex.androidsdk.internal.model.LocusParticipantDeviceModel;
+import com.ciscowebex.androidsdk.internal.queue.Queue;
 import com.ciscowebex.androidsdk.phone.Call;
 import com.ciscowebex.androidsdk.phone.Phone;
 import com.github.benoitdion.ln.Ln;
@@ -37,7 +40,8 @@ import com.webex.wme.MediaTrack;
 
 public class MediaSession {
 
-    interface MediaType {}
+    interface MediaType {
+    }
 
     static class MediaTypeVideo implements MediaType {
 
@@ -70,6 +74,8 @@ public class MediaSession {
 
     private boolean localOnly;
 
+    private boolean prepared;
+
     MediaSession(WmeSession session, boolean localOnly) {
         this.session = session;
         this.localOnly = localOnly;
@@ -79,8 +85,20 @@ public class MediaSession {
         return session.getCapability();
     }
 
+    MediaDeviceMananger getMediaDeviceManager() {
+        return session.getMediaDeviceManager();
+    }
+
     public boolean isRunning() {
         return session.getState() == WmeSession.State.CONNECTED;
+    }
+
+    public void setPrepared(boolean prepared) {
+        this.prepared = prepared;
+    }
+
+    public boolean isPrepared() {
+        return prepared;
     }
 
     public void startPreview() {
@@ -102,19 +120,20 @@ public class MediaSession {
     public void startCloud(CallImpl call) {
         if (!localOnly) {
             session.launch(new MediaObserver(call));
-
-            WmeTrack track = session.getTrack(WmeTrack.Type.RemoteVideo, WMEngine.MAIN_VID);
-            if (track != null && call != null && call.getModel() != null) {
-                LocusParticipantDeviceModel device = call.getModel().getMyDevice();
-                if (device == null) {
-                    Ln.d("Cannot find self device for call: " + call);
-                    return;
+            Queue.main.run(() -> {
+                WmeTrack track = session.getTrack(WmeTrack.Type.RemoteVideo, WMEngine.MAIN_VID);
+                if (track != null && track.getTrack() != null && call != null && call.getModel() != null) {
+                    LocusParticipantDeviceModel device = call.getModel().getMyDevice();
+                    if (device == null) {
+                        Ln.d("Cannot find self device for call: " + call);
+                        return;
+                    }
+                    if (device.isServerComposed()) {
+                        Ln.d("Set the remote video render mode to CropFill for composed video");
+                        track.getTrack().SetRenderMode(MediaTrack.ScalingMode.CropFill);
+                    }
                 }
-                if (device.isServerComposed()) {
-                    Ln.d("Set the remote video render mode to CropFill for composed video");
-                    track.getTrack().SetRenderMode(MediaTrack.ScalingMode.CropFill);
-                }
-            }
+            });
         }
     }
 
@@ -184,8 +203,7 @@ public class MediaSession {
     public void update(MediaType type) {
         if (type instanceof MediaTypeVideo) {
             session.updateVideoTracks(((MediaTypeVideo) type).localView, ((MediaTypeVideo) type).remoteView);
-        }
-        else if (type instanceof MediaTypeSharing) {
+        } else if (type instanceof MediaTypeSharing) {
             session.updateSharingTracks(((MediaTypeSharing) type).view);
         }
     }

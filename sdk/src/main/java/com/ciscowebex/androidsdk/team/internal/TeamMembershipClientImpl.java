@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,7 +49,7 @@ public class TeamMembershipClientImpl implements TeamMembershipClient {
     }
 
     public void list(@Nullable String teamId, int max, @NonNull CompletionHandler<List<TeamMembership>> handler) {
-        Service.Hydra.get("team", "memberships")
+        Service.Hydra.global().get("team/memberships")
                 .with("teamId", teamId)
                 .with("max", max <= 0 ? null : String.valueOf(max))
                 .auth(authenticator)
@@ -60,7 +60,7 @@ public class TeamMembershipClientImpl implements TeamMembershipClient {
     }
 
     public void get(@NonNull String membershipId, @NonNull CompletionHandler<TeamMembership> handler) {
-        Service.Hydra.get("team", "memberships", membershipId)
+        Service.Hydra.global().get("team/memberships/" + membershipId)
                 .auth(authenticator)
                 .queue(Queue.main)
                 .model(TeamMembership.class)
@@ -69,8 +69,8 @@ public class TeamMembershipClientImpl implements TeamMembershipClient {
     }
 
     public void create(@NonNull String teamId, @Nullable String personId, @Nullable String personEmail, boolean isModerator, @NonNull CompletionHandler<TeamMembership> handler) {
-        Service.Hydra.post(Maps.makeMap("teamId", teamId, "personId", personId, "personEmail", personEmail, "isModerator", isModerator))
-                .to("team", "memberships")
+        Service.Hydra.global().post(Maps.makeMap("teamId", teamId, "personId", personId, "personEmail", personEmail, "isModerator", isModerator))
+                .to("team/memberships")
                 .auth(authenticator)
                 .queue(Queue.main)
                 .model(TeamMembership.class)
@@ -79,8 +79,8 @@ public class TeamMembershipClientImpl implements TeamMembershipClient {
     }
 
     public void update(@NonNull String membershipId, boolean isModerator, @NonNull CompletionHandler<TeamMembership> handler) {
-        Service.Hydra.put(Maps.makeMap("isModerator", isModerator))
-                .to("team", "memberships", membershipId)
+        Service.Hydra.global().put(Maps.makeMap("isModerator", isModerator))
+                .to("team/memberships/" + membershipId)
                 .auth(authenticator)
                 .queue(Queue.main)
                 .model(TeamMembership.class)
@@ -89,7 +89,7 @@ public class TeamMembershipClientImpl implements TeamMembershipClient {
     }
 
     public void delete(@NonNull String membershipId, @NonNull CompletionHandler<Void> handler) {
-        Service.Hydra.delete("team", "memberships", membershipId)
+        Service.Hydra.global().delete("team/memberships/" + membershipId)
                 .auth(authenticator)
                 .queue(Queue.main)
                 .error(handler)

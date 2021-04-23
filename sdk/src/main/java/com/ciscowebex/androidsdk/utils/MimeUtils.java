@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Cisco Systems Inc
+ * Copyright 2016-2021 Cisco Systems Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,6 +69,15 @@ public class MimeUtils {
         } else {
             MimeUtils.ContentType ret = CONTENT_TYPE_BY_EXTENSION.get(getExtension(filename.toLowerCase(Locale.US)));
             return ret == null ? MimeUtils.ContentType.UNKNOWN : ret;
+        }
+    }
+
+    public static MimeUtils.ContentType getContentTypeByMimeType(String mimeType) {
+        if (isEmptyOrGeneric(mimeType)) {
+            return ContentType.UNKNOWN;
+        } else {
+            MimeUtils.ContentType ret = CONTENT_TYPE_BY_EXTENSION.get(getExtensionByMimeType(mimeType));
+            return ret == null ? ContentType.UNKNOWN : ret;
         }
     }
 
