@@ -1,6 +1,9 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+#### 3.16.0 Releases
+- `3.16.0` Releases - [3.16.0](#3160)
+
 #### 3.15.0 Releases
 - `3.15.0` Releases - [3.15.0](#3150)
 
@@ -106,10 +109,29 @@ All notable changes to this project will be documented in this file.
 #### 0.2.0 Releases
 - `0.2.0` Releases - [0.2.0](#020)
 
+## [3.16.0](https://github.com/webex/webex-android-sdk/releases/tag/3.16.0)
+Released on **24 September, 2025**.
+### Added
+- Added 16kb page size support as per the google recommendation.
+- New callback `Phone.onCallHistoryEvent: ((_ event: CallHistoryEvent) -> Void)?` when the call history is synced, removed, or a removal attempt fails.
+- New delegate function `onLoginFailed()` in `WebexAuthDelegate` to notify initialization fails during the login process (e.g., due to missing entitlements or database errors).
+- New enum `SendingAudioChangeResult` to represent sending audio changes state (`Success`, `Failed`, `NotAllowed`) for mute/unmute operations, especially when a call is placed on hold.
+### Updated
+- Permissions behavior: SDK now returns `WebexError.PERMISSION_REQUIRED` when required runtime permission/consent is missing; apps must request/grant before invoking APIs like:
+   - Camera/Microphone/Manage phone: affects `webex.phone.dial()`, `webex.phone.answer()`.
+   - Storage: affects Virtual Backgrounds and message attachments.
+   - Bluetooth: affects Bluetooth audio during calls.
+   - MediaProjection: required for screen sharing. For Screen sharing API: consent is now mandatory.
+      - `startSharing(consent, callback, shareConfig?)`, accepts new param user consent for sharing screen
+      - `startSharing(notification, notificationId, consent, callback, shareConfig?)` : accepts new param user consent for sharing screen 
+- Updated the `sendingAudioWithResult(isSending: Bool, result: SendingAudioChangeResult)` event in the existing `call.onMediaChanged` callback to provide sending audio changes result.
+- Fixed an issue where `CalendarMeetings.getById(meetingId: String, handler: CompletionHandler<CalendarMeeting>)` was not giving meeting description/agenda.
+- Renamed ResourceType enum values from `Membership` to `Person`, `Messages` to `Teams`.
+
 ## [3.15.0](https://github.com/webex/webex-android-sdk/releases/tag/3.15.0)
 Released on **21 February, 2025**
 ### Added
-- New SDK variant “Webex-Message” released, a light weight SDK for Messaging.
+- New SDK variant “Webex-Message” Released, a light weight SDK for Messaging.
 
 ## [3.14.0](https://github.com/webex/webex-android-sdk/releases/tag/3.14.0)
 Released on **13 November, 2024**
