@@ -134,7 +134,7 @@ Released on **21 February, 2025**.
 - New SDK variant “Webex-Message.” Released, a light weight SDK for Messaging.
 
 ## [3.14.0](https://github.com/webex/webex-android-sdk/releases/tag/3.14.0)
-Released on **6 November, 2024**.
+Released on **13 November, 2024**.
 ### Added
 - New Enum `SpeechEnhancementResult` to represent the result of speech enhancement operation.
 - New API added `Phone.useLegacyReceiverNoiseRemoval(useLegacy: Boolean)` to enable legacy receiver side noise removal. This will disable the new receiver side speech enhancement.
