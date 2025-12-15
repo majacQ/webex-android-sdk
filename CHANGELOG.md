@@ -1,6 +1,9 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+#### 3.16.1 Releases
+- `3.16.1` Releases - [3.16.1](#3161)
+
 #### 3.16.0 Releases
 - `3.16.0` Releases - [3.16.0](#3160)
 
@@ -108,6 +111,22 @@ All notable changes to this project will be documented in this file.
 
 #### 0.2.0 Releases
 - `0.2.0` Releases - [0.2.0](#020)
+
+## [3.16.1](https://github.com/webex/webex-android-sdk/releases/tag/3.16.1)
+Released on **15 December, 2025**.
+### Added
+- New API added `Call.holdCall(putOnHold: Boolean, callback: CompletionHandler<Void>)` with `CompletionHandler<Void>` callback to asynchronously notify about success or failure for call hold/resume operations.
+- New callback `CallObserver.onCallHoldStateChanged(call: Call, holdResumeInfo: HoldResumeInfo)` listener to be notified about changes to the hold status of a `call`.
+### Updated
+- Fixed issue where self-camera orientation did not update according to device orientation.
+- Fixed issue where dynamically setting the remote screen-sharing view (as described [here](https://github.com/webex/webex-android-sdk/wiki/Screen-Sharing-Set-View)) was not functioning as expected.
+- Fixed `webex.messages.markAsRead()` SDK API to prevent `InvalidMessageId` error when the optional `messageId` parameter is not provided.
+- Fixed issues retrieving `Membership.created` values using `MembershipClient.list()`.
+- Fixed issues retrieving `Team.created` values from `TeamClient.list()`.
+- Fixed issues retrieving `MembershipReadStatus.lastSeenDate` using `MembershipClient.listWithReadStatus()`.
+- Fixed 16KB page size support for Android 10 devices.
+### Deprecated
+- Deprecated API `Call.holdCall(putOnHold: Boolean)` use `Call.holdCall(putOnHold: Boolean, callback: CompletionHandler<Void>)` instead.
 
 ## [3.16.0](https://github.com/webex/webex-android-sdk/releases/tag/3.16.0)
 Released on **24 September, 2025**.
